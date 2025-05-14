@@ -16,6 +16,7 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import MSPR from "./pages/MSPR";
+import Pays from "./pages/Pays";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,12 @@ const AppRoutes = () => {
       <Route path="/mspr" element={
         <ProtectedRoute>
           <MSPR />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/pays" element={
+        <ProtectedRoute>
+          <Pays />
         </ProtectedRoute>
       } />
       
