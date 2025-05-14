@@ -10,6 +10,7 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts';
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DataPoint {
   date: string;
@@ -25,9 +26,38 @@ interface DataChartProps {
     color: string;
     name?: string;
   }[];
+  isLoading?: boolean;
 }
 
-export default function DataChart({ title, description, data, lines }: DataChartProps) {
+export default function DataChart({ title, description, data, lines, isLoading = false }: DataChartProps) {
+  if (isLoading) {
+    return (
+      <Card className="col-span-full">
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+          {description && <CardDescription>{description}</CardDescription>}
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[300px] w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (data.length === 0) {
+    return (
+      <Card className="col-span-full">
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+          {description && <CardDescription>{description}</CardDescription>}
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[300px]">
+          <p className="text-muted-foreground">Aucune donnée disponible</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="col-span-full">
       <CardHeader>
