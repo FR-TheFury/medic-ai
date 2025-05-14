@@ -301,10 +301,14 @@ export default function Pays() {
                   <Pagination className="w-full">
                     <PaginationContent>
                       <PaginationItem>
-                        <PaginationPrevious 
-                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                          disabled={currentPage === 1}
-                        />
+                        {currentPage === 1 ? (
+                          <Button variant="outline" size="icon" disabled className="cursor-not-allowed opacity-50">
+                            <span className="sr-only">Go to previous page</span>
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <PaginationPrevious onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} />
+                        )}
                       </PaginationItem>
                       
                       {[...Array(totalPages)].map((_, i) => (
@@ -319,10 +323,14 @@ export default function Pays() {
                       )).slice(Math.max(0, currentPage - 3), Math.min(totalPages, currentPage + 2))}
                       
                       <PaginationItem>
-                        <PaginationNext 
-                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                          disabled={currentPage === totalPages}
-                        />
+                        {currentPage === totalPages ? (
+                          <Button variant="outline" size="icon" disabled className="cursor-not-allowed opacity-50">
+                            <span className="sr-only">Go to next page</span>
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <PaginationNext onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} />
+                        )}
                       </PaginationItem>
                     </PaginationContent>
                   </Pagination>
