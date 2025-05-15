@@ -15,6 +15,7 @@ const api = axios.create({
 // Add a request interceptor to include auth token
 api.interceptors.request.use(
   (config) => {
+    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -22,6 +23,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('API Request Error:', error);
     return Promise.reject(error);
   }
 );
@@ -29,13 +31,15 @@ api.interceptors.request.use(
 // Add a response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
+    console.log(`API Response: ${response.status} for ${response.config.url}`);
     return response;
   },
   (error) => {
+    console.error('API Response Error:', error);
     const message = error.response?.data?.detail || 'An error occurred';
     toast({
       variant: "destructive",
-      title: "Error",
+      title: "Erreur API",
       description: message,
     });
     return Promise.reject(error);
