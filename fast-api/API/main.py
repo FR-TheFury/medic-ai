@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI, Depends, HTTPException, Query, Body, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -8,9 +9,6 @@ from decimal import Decimal
 import joblib
 import pandas as pd
 from functools import lru_cache
-from .database import SessionLocal, engine
-from .models import Base
-from . import crud
 from pathlib import Path
 import pickle
 from fastapi import HTTPException
@@ -79,7 +77,14 @@ API = FastAPI(
 # Configuration du middleware CORS
 API.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080", "http://localhost:5173", "http://127.0.0.1:8080", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:8080", 
+        "http://localhost:5173", 
+        "http://127.0.0.1:8080", 
+        "http://127.0.0.1:5173",
+        "http://localhost:8081",  # Ajout du port 8081
+        "http://127.0.0.1:8081"   # Ajout du port 8081 avec IP
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
