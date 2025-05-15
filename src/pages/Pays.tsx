@@ -13,28 +13,52 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { pays } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Pays {
-  id: number;
+  idPays: number;
   nomPays: string;
-  population?: number;
-  continent?: string;
-  codeISO?: string;
+  isoPays?: string;
+  populationTotale?: number;
+  latitudePays?: number;
+  longitudePays?: number; 
+  Superficie?: number;
+  densitePopulation?: number;
+  idContinent?: number;
+  continent?: {
+    nomContinent: string;
+  };
 }
 
 export default function Pays() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newPays, setNewPays] = useState<Omit<Pays, 'id'>>({
+  const [newPays, setNewPays] = useState<Omit<Pays, 'idPays'>>({
     nomPays: '',
-    population: undefined,
-    continent: '',
-    codeISO: ''
+    isoPays: '',
+    populationTotale: undefined,
+    latitudePays: undefined,
+    longitudePays: undefined,
+    Superficie: undefined,
+    densitePopulation: undefined,
+    idContinent: undefined
   });
   
   const itemsPerPage = 10;
   const queryClient = useQueryClient();
+  
+  // Fetch continent data for the dropdown
+  const { data: continentData } = useQuery({
+    queryKey: ['continents'],
+    queryFn: async () => {
+      const response = await fetch('http://127.0.0.1:8000/continents/');
+      if (!response.ok) {
+        throw new Error('Failed to fetch continents');
+      }
+      return response.json();
+    }
+  });
   
   // Fetch pays data
   const { data: paysData, isLoading, error } = useQuery({
@@ -47,7 +71,7 @@ export default function Pays() {
   
   // Create new pays mutation
   const createPaysMutation = useMutation({
-    mutationFn: (data: Omit<Pays, 'id'>) => pays.create(data),
+    mutationFn: (data: Omit<Pays, 'idPays'>) => pays.create(data),
     onSuccess: () => {
       toast({
         title: "Pays ajouté",
@@ -57,9 +81,13 @@ export default function Pays() {
       setIsAddDialogOpen(false);
       setNewPays({
         nomPays: '',
-        population: undefined,
-        continent: '',
-        codeISO: ''
+        isoPays: '',
+        populationTotale: undefined,
+        latitudePays: undefined,
+        longitudePays: undefined,
+        Superficie: undefined,
+        densitePopulation: undefined,
+        idContinent: undefined
       });
     },
     onError: (error) => {
@@ -124,6 +152,13 @@ export default function Pays() {
       deletePaysMutation.mutate(id);
     }
   };
+
+  // Get continent name from ID
+  const getContinentName = (idContinent?: number) => {
+    if (!idContinent || !continentData) return "-";
+    const continent = continentData.find((c: any) => c.idContinent === idContinent);
+    return continent ? continent.nomContinent : "-";
+  };
   
   return (
     <MainLayout>
@@ -164,38 +199,101 @@ export default function Pays() {
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="population" className="text-right">
-                      Population
-                    </label>
-                    <Input
-                      id="population"
-                      type="number"
-                      className="col-span-3"
-                      value={newPays.population || ''}
-                      onChange={(e) => setNewPays({ ...newPays, population: e.target.value ? parseInt(e.target.value) : undefined })}
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="continent" className="text-right">
-                      Continent
-                    </label>
-                    <Input
-                      id="continent"
-                      className="col-span-3"
-                      value={newPays.continent || ''}
-                      onChange={(e) => setNewPays({ ...newPays, continent: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="codeISO" className="text-right">
+                    <label htmlFor="isoPays" className="text-right">
                       Code ISO
                     </label>
                     <Input
-                      id="codeISO"
+                      id="isoPays"
                       className="col-span-3"
-                      value={newPays.codeISO || ''}
-                      onChange={(e) => setNewPays({ ...newPays, codeISO: e.target.value })}
+                      value={newPays.isoPays || ''}
+                      onChange={(e) => setNewPays({ ...newPays, isoPays: e.target.value })}
                     />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="populationTotale" className="text-right">
+                      Population
+                    </label>
+                    <Input
+                      id="populationTotale"
+                      type="number"
+                      className="col-span-3"
+                      value={newPays.populationTotale || ''}
+                      onChange={(e) => setNewPays({ ...newPays, populationTotale: e.target.value ? parseInt(e.target.value) : undefined })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="latitudePays" className="text-right">
+                      Latitude
+                    </label>
+                    <Input
+                      id="latitudePays"
+                      type="number"
+                      step="0.01"
+                      className="col-span-3"
+                      value={newPays.latitudePays || ''}
+                      onChange={(e) => setNewPays({ ...newPays, latitudePays: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="longitudePays" className="text-right">
+                      Longitude
+                    </label>
+                    <Input
+                      id="longitudePays"
+                      type="number"
+                      step="0.01"
+                      className="col-span-3"
+                      value={newPays.longitudePays || ''}
+                      onChange={(e) => setNewPays({ ...newPays, longitudePays: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="Superficie" className="text-right">
+                      Superficie
+                    </label>
+                    <Input
+                      id="Superficie"
+                      type="number"
+                      step="0.01"
+                      className="col-span-3"
+                      value={newPays.Superficie || ''}
+                      onChange={(e) => setNewPays({ ...newPays, Superficie: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="densitePopulation" className="text-right">
+                      Densité de population
+                    </label>
+                    <Input
+                      id="densitePopulation"
+                      type="number"
+                      step="0.1"
+                      className="col-span-3"
+                      value={newPays.densitePopulation || ''}
+                      onChange={(e) => setNewPays({ ...newPays, densitePopulation: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="idContinent" className="text-right">
+                      Continent
+                    </label>
+                    <div className="col-span-3">
+                      <Select
+                        value={newPays.idContinent?.toString() || ''}
+                        onValueChange={(value) => setNewPays({ ...newPays, idContinent: parseInt(value) })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un continent" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {continentData?.map((continent: any) => (
+                            <SelectItem key={continent.idContinent} value={continent.idContinent.toString()}>
+                              {continent.nomContinent}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
@@ -242,11 +340,13 @@ export default function Pays() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[100px]">ID</TableHead>
+                      <TableHead className="w-[80px]">ID</TableHead>
                       <TableHead>Nom</TableHead>
-                      <TableHead>Population</TableHead>
-                      <TableHead>Continent</TableHead>
                       <TableHead>Code ISO</TableHead>
+                      <TableHead>Population</TableHead>
+                      <TableHead>Densité</TableHead>
+                      <TableHead>Superficie</TableHead>
+                      <TableHead>Continent</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -256,34 +356,38 @@ export default function Pays() {
                         <TableRow key={`skeleton-${index}`}>
                           <TableCell><Skeleton className="h-5 w-12" /></TableCell>
                           <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                           <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                           <TableCell className="text-right"><Skeleton className="h-9 w-20 ml-auto" /></TableCell>
                         </TableRow>
                       ))
                     ) : paginatedPays.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
                           {searchTerm ? "Aucun pays trouvé avec cette recherche" : "Aucun pays disponible"}
                         </TableCell>
                       </TableRow>
                     ) : (
                       paginatedPays.map((pays: Pays) => (
-                        <TableRow key={pays.id}>
-                          <TableCell>{pays.id}</TableCell>
+                        <TableRow key={pays.idPays}>
+                          <TableCell>{pays.idPays}</TableCell>
                           <TableCell className="font-medium">{pays.nomPays}</TableCell>
-                          <TableCell>{pays.population?.toLocaleString() || '-'}</TableCell>
-                          <TableCell>{pays.continent || '-'}</TableCell>
-                          <TableCell>{pays.codeISO || '-'}</TableCell>
+                          <TableCell>{pays.isoPays || '-'}</TableCell>
+                          <TableCell>{pays.populationTotale?.toLocaleString() || '-'}</TableCell>
+                          <TableCell>{pays.densitePopulation?.toFixed(1) || '-'}</TableCell>
+                          <TableCell>{pays.Superficie?.toLocaleString() || '-'} km²</TableCell>
+                          <TableCell>{getContinentName(pays.idContinent)}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDeletePays(pays.id)}
+                              onClick={() => handleDeletePays(pays.idPays)}
                               disabled={deletePaysMutation.isPending}
                             >
-                              {deletePaysMutation.isPending && deletePaysMutation.variables === pays.id ? (
+                              {deletePaysMutation.isPending && deletePaysMutation.variables === pays.idPays ? (
                                 <Loader className="h-4 w-4 animate-spin" />
                               ) : (
                                 "Supprimer"

@@ -9,9 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Activity, Users, Heart, AlertCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { pays, regions, releves, maladies } from '@/lib/api';
-import { format } from 'date-fns';
+import { format, subMonths } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 export default function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState('all');
@@ -19,6 +21,12 @@ export default function Dashboard() {
   const [statsData, setStatsData] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [topCountries, setTopCountries] = useState([]);
+
+  // Date range state
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: subMonths(new Date(), 12),
+    to: new Date()
+  });
 
   // Fetch regions for dropdown
   const { data: regionsData, isLoading: regionsLoading } = useQuery({
@@ -39,14 +47,12 @@ export default function Dashboard() {
     }
   }, [maladiesData, selectedMaladie]);
 
+  // Format dates for API calls
+  const formattedStartDate = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : 
+    format(subMonths(new Date(), 12), 'yyyy-MM-dd');
+  const formattedEndDate = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+  
   // Fetch releves data based on selected region and dates
-  const today = new Date();
-  const startDate = new Date(today);
-  startDate.setFullYear(today.getFullYear() - 1);
-  
-  const formattedStartDate = format(startDate, 'yyyy-MM-dd');
-  const formattedEndDate = format(today, 'yyyy-MM-dd');
-  
   const { data: relevesData, isLoading: relevesLoading, error: relevesError } = useQuery({
     queryKey: ['releves', selectedRegion, formattedStartDate, formattedEndDate],
     queryFn: async () => {
@@ -258,7 +264,13 @@ export default function Dashboard() {
             </p>
           </div>
           
-          <div className="w-full md:w-auto">
+          <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              className="w-full md:w-auto"
+            />
+            
             <Select value={selectedRegion} onValueChange={setSelectedRegion}>
               <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Filtrer par région" />
@@ -302,7 +314,7 @@ export default function Dashboard() {
           {chartData.length > 0 ? (
             <DataChart 
               title="Évolution des cas"
-              description="Tendance sur les 12 derniers mois"
+              description="Tendance sur la période sélectionnée"
               data={chartData}
               lines={[
                 { dataKey: 'nouveauxCas', color: '#2563eb', name: 'Nouveaux cas' },
