@@ -8,18 +8,27 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { AlertCircle, Flag, Loader, MapPin, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertCircle, Flag, Loader, MapPin, Search, ChevronLeft, ChevronRight, Globe } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { pays } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+// Interface complète pour correspondre au modèle backend
 interface Pays {
   id: number;
   nomPays: string;
+  isoPays?: string;
   population?: number;
+  populationTotale?: number;
   continent?: string;
   codeISO?: string;
+  latitudePays?: number;
+  longitudePays?: number;
+  Superficie?: number;
+  densitePopulation?: number;
+  idContinent?: number;
 }
 
 export default function Pays() {
@@ -28,9 +37,15 @@ export default function Pays() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newPays, setNewPays] = useState<Omit<Pays, 'id'>>({
     nomPays: '',
-    population: undefined,
+    isoPays: '',
+    populationTotale: undefined,
     continent: '',
-    codeISO: ''
+    codeISO: '',
+    latitudePays: undefined,
+    longitudePays: undefined,
+    Superficie: undefined,
+    densitePopulation: undefined,
+    idContinent: undefined
   });
   
   const itemsPerPage = 10;
@@ -57,9 +72,15 @@ export default function Pays() {
       setIsAddDialogOpen(false);
       setNewPays({
         nomPays: '',
-        population: undefined,
+        isoPays: '',
+        populationTotale: undefined,
         continent: '',
-        codeISO: ''
+        codeISO: '',
+        latitudePays: undefined,
+        longitudePays: undefined,
+        Superficie: undefined,
+        densitePopulation: undefined,
+        idContinent: undefined
       });
     },
     onError: (error) => {
@@ -164,15 +185,27 @@ export default function Pays() {
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="population" className="text-right">
+                    <label htmlFor="isoPays" className="text-right">
+                      Code ISO
+                    </label>
+                    <Input
+                      id="isoPays"
+                      className="col-span-3"
+                      value={newPays.isoPays || ''}
+                      onChange={(e) => setNewPays({ ...newPays, isoPays: e.target.value })}
+                      maxLength={3}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="populationTotale" className="text-right">
                       Population
                     </label>
                     <Input
-                      id="population"
+                      id="populationTotale"
                       type="number"
                       className="col-span-3"
-                      value={newPays.population || ''}
-                      onChange={(e) => setNewPays({ ...newPays, population: e.target.value ? parseInt(e.target.value) : undefined })}
+                      value={newPays.populationTotale || ''}
+                      onChange={(e) => setNewPays({ ...newPays, populationTotale: e.target.value ? parseInt(e.target.value) : undefined })}
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -187,14 +220,67 @@ export default function Pays() {
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="codeISO" className="text-right">
-                      Code ISO
+                    <label htmlFor="latitudePays" className="text-right">
+                      Latitude
                     </label>
                     <Input
-                      id="codeISO"
+                      id="latitudePays"
+                      type="number"
+                      step="0.01"
                       className="col-span-3"
-                      value={newPays.codeISO || ''}
-                      onChange={(e) => setNewPays({ ...newPays, codeISO: e.target.value })}
+                      value={newPays.latitudePays || ''}
+                      onChange={(e) => setNewPays({ ...newPays, latitudePays: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="longitudePays" className="text-right">
+                      Longitude
+                    </label>
+                    <Input
+                      id="longitudePays"
+                      type="number"
+                      step="0.01"
+                      className="col-span-3"
+                      value={newPays.longitudePays || ''}
+                      onChange={(e) => setNewPays({ ...newPays, longitudePays: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="superficie" className="text-right">
+                      Superficie
+                    </label>
+                    <Input
+                      id="superficie"
+                      type="number"
+                      step="0.01"
+                      className="col-span-3"
+                      value={newPays.Superficie || ''}
+                      onChange={(e) => setNewPays({ ...newPays, Superficie: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="densitePopulation" className="text-right">
+                      Densité
+                    </label>
+                    <Input
+                      id="densitePopulation"
+                      type="number"
+                      step="0.1"
+                      className="col-span-3"
+                      value={newPays.densitePopulation || ''}
+                      onChange={(e) => setNewPays({ ...newPays, densitePopulation: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="idContinent" className="text-right">
+                      ID Continent
+                    </label>
+                    <Input
+                      id="idContinent"
+                      type="number"
+                      className="col-span-3"
+                      value={newPays.idContinent || ''}
+                      onChange={(e) => setNewPays({ ...newPays, idContinent: e.target.value ? parseInt(e.target.value) : undefined })}
                     />
                   </div>
                 </div>
@@ -244,9 +330,12 @@ export default function Pays() {
                     <TableRow>
                       <TableHead className="w-[100px]">ID</TableHead>
                       <TableHead>Nom</TableHead>
+                      <TableHead>Code ISO</TableHead>
                       <TableHead>Population</TableHead>
                       <TableHead>Continent</TableHead>
-                      <TableHead>Code ISO</TableHead>
+                      <TableHead>Superficie</TableHead>
+                      <TableHead>Densité</TableHead>
+                      <TableHead>Coordonnées</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -256,15 +345,18 @@ export default function Pays() {
                         <TableRow key={`skeleton-${index}`}>
                           <TableCell><Skeleton className="h-5 w-12" /></TableCell>
                           <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                           <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                           <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                           <TableCell className="text-right"><Skeleton className="h-9 w-20 ml-auto" /></TableCell>
                         </TableRow>
                       ))
                     ) : paginatedPays.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
                           {searchTerm ? "Aucun pays trouvé avec cette recherche" : "Aucun pays disponible"}
                         </TableCell>
                       </TableRow>
@@ -273,9 +365,19 @@ export default function Pays() {
                         <TableRow key={pays.id}>
                           <TableCell>{pays.id}</TableCell>
                           <TableCell className="font-medium">{pays.nomPays}</TableCell>
-                          <TableCell>{pays.population?.toLocaleString() || '-'}</TableCell>
+                          <TableCell>{pays.isoPays || pays.codeISO || '-'}</TableCell>
+                          <TableCell>{(pays.populationTotale || pays.population)?.toLocaleString() || '-'}</TableCell>
                           <TableCell>{pays.continent || '-'}</TableCell>
-                          <TableCell>{pays.codeISO || '-'}</TableCell>
+                          <TableCell>{pays.Superficie?.toLocaleString() || '-'}</TableCell>
+                          <TableCell>{pays.densitePopulation?.toLocaleString() || '-'}</TableCell>
+                          <TableCell>
+                            {pays.latitudePays && pays.longitudePays ? (
+                              <div className="flex items-center">
+                                <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
+                                {pays.latitudePays.toFixed(2)}, {pays.longitudePays.toFixed(2)}
+                              </div>
+                            ) : '-'}
+                          </TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="destructive"

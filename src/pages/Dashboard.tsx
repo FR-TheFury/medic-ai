@@ -11,7 +11,9 @@ import { useQuery } from '@tanstack/react-query';
 import { pays, regions, releves, maladies } from '@/lib/api';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
+import { DateRange } from 'react-day-picker';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 export default function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState('all');
@@ -19,6 +21,17 @@ export default function Dashboard() {
   const [statsData, setStatsData] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [topCountries, setTopCountries] = useState([]);
+  
+  // État pour le sélecteur de dates
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setFullYear(today.getFullYear() - 1);
+    return {
+      from: startDate,
+      to: today,
+    };
+  });
 
   // Fetch regions for dropdown
   const { data: regionsData, isLoading: regionsLoading } = useQuery({
@@ -39,17 +52,18 @@ export default function Dashboard() {
     }
   }, [maladiesData, selectedMaladie]);
 
+  // Formater les dates pour l'API
+  const formattedStartDate = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : '';
+  const formattedEndDate = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : '';
+  
   // Fetch releves data based on selected region and dates
-  const today = new Date();
-  const startDate = new Date(today);
-  startDate.setFullYear(today.getFullYear() - 1);
-  
-  const formattedStartDate = format(startDate, 'yyyy-MM-dd');
-  const formattedEndDate = format(today, 'yyyy-MM-dd');
-  
   const { data: relevesData, isLoading: relevesLoading, error: relevesError } = useQuery({
     queryKey: ['releves', selectedRegion, formattedStartDate, formattedEndDate],
     queryFn: async () => {
+      if (!dateRange?.from || !dateRange?.to) {
+        return { data: [] };
+      }
+      
       if (selectedRegion === 'all') {
         return releves.getByDateRange(formattedStartDate, formattedEndDate);
       } else {
@@ -57,7 +71,7 @@ export default function Dashboard() {
         return releves.getByRegionAndDateRange(regionId, formattedStartDate, formattedEndDate);
       }
     },
-    enabled: !!selectedMaladie,
+    enabled: !!selectedMaladie && !!dateRange?.from && !!dateRange?.to,
   });
 
   // Fetch top countries with most cases
@@ -258,7 +272,13 @@ export default function Dashboard() {
             </p>
           </div>
           
-          <div className="w-full md:w-auto">
+          <div className="w-full md:w-auto flex flex-col md:flex-row gap-4">
+            <DateRangePicker 
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              className="w-full md:w-auto"
+            />
+            
             <Select value={selectedRegion} onValueChange={setSelectedRegion}>
               <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Filtrer par région" />
@@ -302,7 +322,7 @@ export default function Dashboard() {
           {chartData.length > 0 ? (
             <DataChart 
               title="Évolution des cas"
-              description="Tendance sur les 12 derniers mois"
+              description={`Tendance du ${dateRange?.from ? format(dateRange.from, 'dd/MM/yyyy') : ''} au ${dateRange?.to ? format(dateRange.to, 'dd/MM/yyyy') : ''}`}
               data={chartData}
               lines={[
                 { dataKey: 'nouveauxCas', color: '#2563eb', name: 'Nouveaux cas' },
