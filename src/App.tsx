@@ -17,7 +17,6 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import MSPR from "./pages/MSPR";
 import Pays from "./pages/Pays";
-import Releves from "./pages/Releves";
 
 const queryClient = new QueryClient();
 
@@ -83,12 +82,6 @@ const AppRoutes = () => {
       <Route path="/pays" element={
         <ProtectedRoute>
           <Pays />
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/releves" element={
-        <ProtectedRoute>
-          <Releves />
         </ProtectedRoute>
       } />
       
