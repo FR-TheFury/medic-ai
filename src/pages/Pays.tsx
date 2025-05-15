@@ -8,10 +8,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { AlertCircle, Flag, Loader, MapPin, Search, ChevronLeft, ChevronRight, Globe } from 'lucide-react';
+import { AlertCircle, Flag, Loader, MapPin, Search, ChevronLeft, ChevronRight, Globe, ServerCrash } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { pays } from '@/lib/api';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -47,17 +47,44 @@ export default function Pays() {
     densitePopulation: undefined,
     idContinent: undefined
   });
+  const [mockData, setMockData] = useState<Pays[]>([]);
+  const [apiMode, setApiMode] = useState(true);
   
   const itemsPerPage = 10;
   const queryClient = useQueryClient();
   
-  // Fetch pays data
+  useEffect(() => {
+    // Données de test si l'API n'est pas disponible
+    const mockPaysData: Pays[] = [
+      { id: 1, nomPays: "France", isoPays: "FR", populationTotale: 67000000, continent: "Europe", latitudePays: 46.603354, longitudePays: 1.888334, Superficie: 551695, densitePopulation: 123.1, idContinent: 1 },
+      { id: 2, nomPays: "Allemagne", isoPays: "DE", populationTotale: 83000000, continent: "Europe", latitudePays: 51.165691, longitudePays: 10.451526, Superficie: 357022, densitePopulation: 232.8, idContinent: 1 },
+      { id: 3, nomPays: "Espagne", isoPays: "ES", populationTotale: 46000000, continent: "Europe", latitudePays: 40.463667, longitudePays: -3.74922, Superficie: 505990, densitePopulation: 91.1, idContinent: 1 },
+      { id: 4, nomPays: "États-Unis", isoPays: "US", populationTotale: 329000000, continent: "Amérique du Nord", latitudePays: 37.09024, longitudePays: -95.712891, Superficie: 9372610, densitePopulation: 35.1, idContinent: 2 },
+      { id: 5, nomPays: "Japon", isoPays: "JP", populationTotale: 126000000, continent: "Asie", latitudePays: 36.204824, longitudePays: 138.252924, Superficie: 377975, densitePopulation: 333.6, idContinent: 3 },
+    ];
+    setMockData(mockPaysData);
+  }, []);
+  
+  // Fetch pays data with error handling
   const { data: paysData, isLoading, error } = useQuery({
     queryKey: ['pays'],
     queryFn: async () => {
-      const response = await pays.getAll();
-      return response.data;
-    }
+      console.log('Appel API: Récupération des pays');
+      try {
+        const response = await pays.getAll();
+        console.log('Réponse API pays:', response.data);
+        setApiMode(true);
+        return response.data;
+      } catch (err) {
+        console.error('Erreur API lors de la récupération des pays:', err);
+        // En cas d'erreur, on utilise les données de test mais on continue d'afficher la page
+        setApiMode(false);
+        return mockData;
+      }
+    },
+    retry: 1,
+    // Ne pas refaire la requête trop souvent en cas d'erreur
+    refetchOnWindowFocus: false
   });
   
   // Create new pays mutation
@@ -114,9 +141,10 @@ export default function Pays() {
   });
   
   // Filter and paginate pays
-  const filteredPays = paysData?.filter(
+  const dataToUse = paysData || mockData;
+  const filteredPays = dataToUse.filter(
     (pays: Pays) => pays.nomPays.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  );
   
   const paginatedPays = filteredPays.slice(
     (currentPage - 1) * itemsPerPage,
@@ -311,16 +339,39 @@ export default function Pays() {
           />
         </div>
         
+        {!apiMode && (
+          <Alert variant="warning" className="bg-amber-50 border-amber-200">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-600">Mode hors ligne</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              Impossible de se connecter à l'API. Les données affichées sont des exemples. Vérifiez que l'API est en cours d'exécution.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Card>
-          {error ? (
+          {error && apiMode ? (
             <CardContent className="pt-6">
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Erreur</AlertTitle>
-                <AlertDescription>
-                  Impossible de charger les pays. Veuillez réessayer plus tard.
+                <AlertTitle>Erreur de connexion</AlertTitle>
+                <AlertDescription className="flex flex-col gap-2">
+                  <p>Impossible de se connecter à l'API. Vérifiez que:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Le serveur FastAPI est démarré à l'adresse http://127.0.0.1:8000</li>
+                    <li>Les routes API sont configurées correctement</li>
+                    <li>CORS est activé sur le serveur</li>
+                  </ul>
                 </AlertDescription>
               </Alert>
+              
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <ServerCrash className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium">Erreur de connexion à l'API</h3>
+                <p className="text-muted-foreground mt-2 max-w-md">
+                  L'application affiche des données d'exemple en attendant que la connexion à l'API soit rétablie.
+                </p>
+              </div>
             </CardContent>
           ) : (
             <>
@@ -383,7 +434,7 @@ export default function Pays() {
                               variant="destructive"
                               size="sm"
                               onClick={() => handleDeletePays(pays.id)}
-                              disabled={deletePaysMutation.isPending}
+                              disabled={deletePaysMutation.isPending || !apiMode}
                             >
                               {deletePaysMutation.isPending && deletePaysMutation.variables === pays.id ? (
                                 <Loader className="h-4 w-4 animate-spin" />
