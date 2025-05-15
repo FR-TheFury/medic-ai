@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, Depends, HTTPException, Query, Body, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -15,6 +14,10 @@ from fastapi import HTTPException
 from functools import lru_cache
 from pathlib import Path
 import os
+
+# Importer Base depuis le module database
+from .database import Base, engine, SessionLocal
+from . import models, crud  # S'assurer que les modèles et fonctions CRUD sont importés
 
 
 Base.metadata.create_all(bind=engine)
