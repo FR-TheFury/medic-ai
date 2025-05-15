@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Trash } from "lucide-react";
+import { useGetVariantsByMaladie } from "@/hooks/use-maladies";
 
 interface MaladieCardProps {
   id: number;
@@ -14,6 +15,10 @@ interface MaladieCardProps {
 }
 
 export default function MaladieCard({ id, name, variants = [], onEdit, onDelete, onView }: MaladieCardProps) {
+  // We could use this in the future to fetch variants dynamically if needed
+  // const { data: variantData, isLoading } = useGetVariantsByMaladie(id);
+  // const actualVariants = isLoading ? [] : variantData;
+  
   return (
     <Card>
       <CardHeader>
@@ -21,7 +26,7 @@ export default function MaladieCard({ id, name, variants = [], onEdit, onDelete,
         <CardDescription>ID: {id}</CardDescription>
       </CardHeader>
       <CardContent>
-        {variants.length > 0 ? (
+        {variants && variants.length > 0 ? (
           <div className="space-y-2">
             <h4 className="text-sm font-semibold">Variants:</h4>
             <div className="flex flex-wrap gap-2">

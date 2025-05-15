@@ -4,7 +4,7 @@ import MainLayout from '@/components/layouts/MainLayout';
 import MaladieCard from '@/components/maladies/MaladieCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, AlertCircle } from 'lucide-react';
+import { Plus, Search, AlertCircle, Loader } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -16,8 +16,14 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { maladies } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
+import { 
+  useGetMaladies, 
+  useCreateMaladie, 
+  useUpdateMaladie, 
+  useDeleteMaladie,
+  MaladieWithVariants 
+} from '@/hooks/use-maladies';
 
 export default function Maladies() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,22 +31,25 @@ export default function Maladies() {
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [nomMaladie, setNomMaladie] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Mock data for demonstration purposes
-  // In a real application, this would be fetched from your API
-  const [maladiesList, setMaladiesList] = useState([
-    { id: 1, nomMaladie: 'COVID-19', variants: ['Alpha', 'Beta', 'Delta', 'Omicron'] },
-    { id: 2, nomMaladie: 'Ebola', variants: ['Zaïre', 'Soudan', 'Bundibugyo'] },
-    { id: 3, nomMaladie: 'Grippe', variants: ['H1N1', 'H3N2', 'H5N1'] },
-    { id: 4, nomMaladie: 'Paludisme', variants: ['P. falciparum', 'P. vivax', 'P. ovale'] },
-    { id: 5, nomMaladie: 'Variole', variants: [] },
-    { id: 6, nomMaladie: 'Choléra', variants: ['O1', 'O139'] },
-  ]);
+  // Fetch maladies from API
+  const { data: maladiesData, isLoading, isError } = useGetMaladies();
+  
+  // Mutations
+  const createMaladieMutation = useCreateMaladie();
+  const updateMaladieMutation = useUpdateMaladie();
+  const deleteMaladieMutation = useDeleteMaladie();
+  
+  // Process the maladies data to include variants
+  const processedMaladies = (maladiesData || []).map((maladie: any) => ({
+    id: maladie.idMaladie,
+    nomMaladie: maladie.nomMaladie,
+    variants: maladie.variants || [], // This will be used when API returns variants
+  }));
   
   // Filter maladies based on search term
-  const filteredMaladies = maladiesList.filter(maladie => 
+  const filteredMaladies = processedMaladies.filter((maladie: any) => 
     maladie.nomMaladie.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
@@ -50,34 +59,14 @@ export default function Maladies() {
       return;
     }
     
-    setIsLoading(true);
     setError(null);
     
-    try {
-      // In a real application, this would make an API call
-      // const response = await maladies.create({ nomMaladie });
-      
-      // For demo purposes, we'll simulate the API call
-      const newMaladie = {
-        id: Math.max(...maladiesList.map(m => m.id), 0) + 1,
-        nomMaladie,
-        variants: [],
-      };
-      
-      setMaladiesList([...maladiesList, newMaladie]);
-      toast({
-        title: "Maladie créée",
-        description: `La maladie ${nomMaladie} a été créée avec succès`,
-      });
-      
-      // Reset form and close dialog
-      setNomMaladie('');
-      setIsDialogOpen(false);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || "Une erreur est survenue lors de la création");
-    } finally {
-      setIsLoading(false);
-    }
+    createMaladieMutation.mutate({ nomMaladie }, {
+      onSuccess: () => {
+        setNomMaladie('');
+        setIsDialogOpen(false);
+      }
+    });
   };
   
   const handleUpdateMaladie = async () => {
@@ -86,59 +75,26 @@ export default function Maladies() {
       return;
     }
     
-    setIsLoading(true);
     setError(null);
     
-    try {
-      // In a real application, this would make an API call
-      // const response = await maladies.update(selectedId, { nomMaladie });
-      
-      // For demo purposes, we'll simulate the API call
-      const updatedMaladies = maladiesList.map(maladie => 
-        maladie.id === selectedId ? { ...maladie, nomMaladie } : maladie
-      );
-      
-      setMaladiesList(updatedMaladies);
-      toast({
-        title: "Maladie mise à jour",
-        description: `La maladie ${nomMaladie} a été mise à jour avec succès`,
-      });
-      
-      // Reset form and close dialog
-      setNomMaladie('');
-      setSelectedId(null);
-      setIsDialogOpen(false);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || "Une erreur est survenue lors de la mise à jour");
-    } finally {
-      setIsLoading(false);
-    }
+    updateMaladieMutation.mutate({ 
+      id: selectedId,
+      data: { nomMaladie }
+    }, {
+      onSuccess: () => {
+        setNomMaladie('');
+        setSelectedId(null);
+        setIsDialogOpen(false);
+      }
+    });
   };
   
   const handleDeleteMaladie = async (id: number) => {
-    try {
-      // In a real application, this would make an API call
-      // await maladies.delete(id);
-      
-      // For demo purposes, we'll simulate the API call
-      const updatedMaladies = maladiesList.filter(maladie => maladie.id !== id);
-      setMaladiesList(updatedMaladies);
-      
-      toast({
-        title: "Maladie supprimée",
-        description: "La maladie a été supprimée avec succès",
-      });
-    } catch (err: any) {
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: err.response?.data?.detail || "Une erreur est survenue lors de la suppression",
-      });
-    }
+    deleteMaladieMutation.mutate(id);
   };
   
   const handleEdit = (id: number) => {
-    const maladie = maladiesList.find(m => m.id === id);
+    const maladie = processedMaladies.find((m: any) => m.id === id);
     if (maladie) {
       setNomMaladie(maladie.nomMaladie);
       setSelectedId(id);
@@ -183,9 +139,24 @@ export default function Maladies() {
           </div>
         </div>
         
-        {filteredMaladies.length > 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center items-center py-10">
+            <div className="flex flex-col items-center gap-2">
+              <Loader className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">Chargement des maladies...</p>
+            </div>
+          </div>
+        ) : isError ? (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Erreur</AlertTitle>
+            <AlertDescription>
+              Impossible de charger les maladies. Veuillez réessayer plus tard.
+            </AlertDescription>
+          </Alert>
+        ) : filteredMaladies.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredMaladies.map((maladie) => (
+            {filteredMaladies.map((maladie: any) => (
               <MaladieCard
                 key={maladie.id}
                 id={maladie.id}
@@ -244,10 +215,17 @@ export default function Maladies() {
           <DialogFooter>
             <Button
               type="submit"
-              disabled={isLoading}
+              disabled={createMaladieMutation.isPending || updateMaladieMutation.isPending}
               onClick={dialogMode === 'create' ? handleCreateMaladie : handleUpdateMaladie}
             >
-              {dialogMode === 'create' ? 'Créer' : 'Mettre à jour'}
+              {(createMaladieMutation.isPending || updateMaladieMutation.isPending) ? (
+                <>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  {dialogMode === 'create' ? 'Création...' : 'Mise à jour...'}
+                </>
+              ) : (
+                dialogMode === 'create' ? 'Créer' : 'Mettre à jour'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
