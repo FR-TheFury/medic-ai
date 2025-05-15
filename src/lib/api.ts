@@ -1,21 +1,26 @@
 
-// API client for communicating with the Python backend
+// API client pour communiquer avec le backend Python
 import axios from 'axios';
 import { toast } from '@/components/ui/use-toast';
 
-// Create axios instance with base URL
+// Création d'une instance axios avec l'URL de base
 const api = axios.create({
   baseURL: 'http://127.0.0.1:8000',
-  timeout: 5000,
+  timeout: 10000, // Augmentation du timeout pour éviter les erreurs prématurées
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add a request interceptor to include auth token
+// Ajout d'un intercepteur de requête pour inclure le token d'authentification
 api.interceptors.request.use(
   (config) => {
     console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    // Affichage détaillé des informations de requête
+    if (config.data) {
+      console.log('Request data:', config.data);
+    }
+    
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -28,15 +33,26 @@ api.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle errors
+// Ajout d'un intercepteur de réponse pour gérer les erreurs
 api.interceptors.response.use(
   (response) => {
     console.log(`API Response: ${response.status} for ${response.config.url}`);
+    console.log('Response data:', response.data);
     return response;
   },
   (error) => {
     console.error('API Response Error:', error);
-    const message = error.response?.data?.detail || 'An error occurred';
+    // Affichage plus détaillé des informations d'erreur
+    if (error.response) {
+      console.error('Error status:', error.response.status);
+      console.error('Error data:', error.response.data);
+    } else if (error.request) {
+      console.error('No response received:', error.request);
+    } else {
+      console.error('Error message:', error.message);
+    }
+    
+    const message = error.response?.data?.detail || 'Une erreur est survenue';
     toast({
       variant: "destructive",
       title: "Erreur API",
@@ -46,7 +62,7 @@ api.interceptors.response.use(
   }
 );
 
-// Authentication endpoints
+// Endpoints d'authentification
 export const auth = {
   login: (username: string, password: string) => 
     api.post('/token', { username, password }),
@@ -54,7 +70,7 @@ export const auth = {
     api.post('/users', { username, email, password }),
 };
 
-// Maladies endpoints
+// Endpoints des maladies
 export const maladies = {
   getAll: () => api.get('/maladies/'),
   getById: (id: number) => api.get(`/maladies/${id}`),
@@ -63,7 +79,7 @@ export const maladies = {
   delete: (id: number) => api.delete(`/maladies/${id}`),
 };
 
-// Pays endpoints
+// Endpoints des pays
 export const pays = {
   getAll: () => api.get('/pays/'),
   getById: (id: number) => api.get(`/pays/${id}`),
@@ -73,7 +89,7 @@ export const pays = {
   delete: (id: number) => api.delete(`/pays/${id}`),
 };
 
-// Regions endpoints
+// Endpoints des régions
 export const regions = {
   getAll: () => api.get('/regions/'),
   getById: (id: number) => api.get(`/regions/${id}`),
@@ -83,7 +99,7 @@ export const regions = {
   delete: (id: number) => api.delete(`/regions/${id}`),
 };
 
-// Releves endpoints
+// Endpoints des relevés
 export const releves = {
   getAll: () => api.get('/releves/'),
   getById: (id: number) => api.get(`/releves/${id}`),
@@ -96,7 +112,7 @@ export const releves = {
   delete: (id: number) => api.delete(`/releves/${id}`),
 };
 
-// Prediction endpoint
+// Endpoint de prédiction
 export const predictions = {
   predictMortality: (data: {
     nbNouveauCas: number;

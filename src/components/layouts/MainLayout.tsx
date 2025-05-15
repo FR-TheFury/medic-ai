@@ -40,6 +40,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     navigate('/login');
   };
 
+  // S'assurer que les chemins de navigation sont corrects
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <Home className="h-5 w-5 mr-2" /> },
     { path: '/maladies', label: 'Maladies', icon: <Activity className="h-5 w-5 mr-2" /> },
