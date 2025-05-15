@@ -31,6 +31,10 @@ def delete_maladie(db: Session, maladie_id: int):
         db.commit()
     return db_maladie
 
+# Nouvelle fonction pour récupérer les variants par maladie
+def get_variants_by_maladie(db: Session, maladie_id: int):
+    return db.query(Variant).filter(Variant.idMaladie == maladie_id).all()
+
 # --- CRUD pour Continent ---
 def create_continent(db: Session, nomContinent: str):
     db_continent = Continent(nomContinent=nomContinent)

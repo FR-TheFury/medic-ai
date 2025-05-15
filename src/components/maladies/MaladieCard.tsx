@@ -15,9 +15,11 @@ interface MaladieCardProps {
 }
 
 export default function MaladieCard({ id, name, variants = [], onEdit, onDelete, onView }: MaladieCardProps) {
-  // Récupérer les variants dynamiquement si besoin
-  // const { data: variantData, isLoading } = useGetVariantsByMaladie(id);
-  // const displayVariants = variantData?.length > 0 ? variantData : variants;
+  // Récupérer les variants dynamiquement
+  const { data: variantData, isLoading } = useGetVariantsByMaladie(id);
+  const displayVariants = variantData?.length > 0 
+    ? variantData.map((v: any) => v.nomVariant) 
+    : variants;
   
   return (
     <Card>
@@ -26,11 +28,13 @@ export default function MaladieCard({ id, name, variants = [], onEdit, onDelete,
         <CardDescription>ID: {id}</CardDescription>
       </CardHeader>
       <CardContent>
-        {variants && variants.length > 0 ? (
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Chargement des variants...</p>
+        ) : displayVariants && displayVariants.length > 0 ? (
           <div className="space-y-2">
             <h4 className="text-sm font-semibold">Variants:</h4>
             <div className="flex flex-wrap gap-2">
-              {variants.map((variant, index) => (
+              {displayVariants.map((variant: string, index: number) => (
                 <Badge key={index} variant="secondary">
                   {variant}
                 </Badge>
