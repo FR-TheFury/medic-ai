@@ -5,7 +5,7 @@ import { toast } from '@/components/ui/use-toast';
 
 // Create axios instance with base URL
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000', // No space at the beginning
+  baseURL: 'http://127.0.0.1:8000',
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json',

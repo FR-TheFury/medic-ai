@@ -30,19 +30,43 @@ export function useGetVariantsByMaladie(idMaladie: number) {
   return useQuery({
     queryKey: ['variants', idMaladie],
     queryFn: async () => {
-      // This would be the API call to get variants by maladie ID
-      // For now, if your API doesn't have this endpoint, we'll return an empty array
       try {
-        // Uncomment this when you have the API endpoint ready
-        // const response = await axios.get(`http://127.0.0.1:8000/variants/by-maladie/${idMaladie}`);
-        // return response.data;
-        return [];
+        const response = await fetch(`http://127.0.0.1:8000/variants/by-maladie/${idMaladie}`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data;
       } catch (error) {
         console.error("Error fetching variants:", error);
         return [];
       }
     },
     enabled: !!idMaladie, // Only run query if idMaladie is available
+  });
+}
+
+export function useGetMaladieWithVariants(idMaladie: number) {
+  return useQuery({
+    queryKey: ['maladie', 'variants', idMaladie],
+    queryFn: async () => {
+      try {
+        // Get maladie details
+        const maladieResponse = await maladies.getById(idMaladie);
+        const maladieData = maladieResponse.data;
+        
+        // Get variants for this maladie
+        const variantsResponse = await fetch(`http://127.0.0.1:8000/variants/by-maladie/${idMaladie}`)
+          .then(res => res.ok ? res.json() : []);
+        
+        return {
+          ...maladieData,
+          variants: variantsResponse.map((v: any) => v.nomVariant) || []
+        };
+      } catch (error) {
+        console.error("Error fetching maladie with variants:", error);
+        throw error;
+      }
+    },
+    enabled: !!idMaladie,
   });
 }
 

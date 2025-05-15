@@ -15,9 +15,9 @@ interface MaladieCardProps {
 }
 
 export default function MaladieCard({ id, name, variants = [], onEdit, onDelete, onView }: MaladieCardProps) {
-  // We could use this in the future to fetch variants dynamically if needed
+  // Récupérer les variants dynamiquement si besoin
   // const { data: variantData, isLoading } = useGetVariantsByMaladie(id);
-  // const actualVariants = isLoading ? [] : variantData;
+  // const displayVariants = variantData?.length > 0 ? variantData : variants;
   
   return (
     <Card>

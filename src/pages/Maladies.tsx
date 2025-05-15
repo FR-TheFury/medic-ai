@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import MainLayout from '@/components/layouts/MainLayout';
 import MaladieCard from '@/components/maladies/MaladieCard';
 import { Button } from '@/components/ui/button';
@@ -12,18 +12,24 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { toast } from '@/hooks/use-toast';
 import { 
   useGetMaladies, 
   useCreateMaladie, 
   useUpdateMaladie, 
-  useDeleteMaladie,
-  MaladieWithVariants 
+  useDeleteMaladie
 } from '@/hooks/use-maladies';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 export default function Maladies() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,6 +38,8 @@ export default function Maladies() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [nomMaladie, setNomMaladie] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 9; // Nombre de maladies par page
   
   // Fetch maladies from API
   const { data: maladiesData, isLoading, isError } = useGetMaladies();
@@ -45,13 +53,19 @@ export default function Maladies() {
   const processedMaladies = (maladiesData || []).map((maladie: any) => ({
     id: maladie.idMaladie,
     nomMaladie: maladie.nomMaladie,
-    variants: maladie.variants || [], // This will be used when API returns variants
+    variants: maladie.variants || [], // This will be populated when API returns variants
   }));
   
   // Filter maladies based on search term
   const filteredMaladies = processedMaladies.filter((maladie: any) => 
     maladie.nomMaladie.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  // Pagination logic
+  const totalPages = Math.ceil(filteredMaladies.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentMaladies = filteredMaladies.slice(startIndex, endIndex);
   
   const handleCreateMaladie = async () => {
     if (!nomMaladie.trim()) {
@@ -110,6 +124,13 @@ export default function Maladies() {
     setIsDialogOpen(true);
   };
   
+  // Pagination handlers
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+  
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -155,19 +176,94 @@ export default function Maladies() {
             </AlertDescription>
           </Alert>
         ) : filteredMaladies.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredMaladies.map((maladie: any) => (
-              <MaladieCard
-                key={maladie.id}
-                id={maladie.id}
-                name={maladie.nomMaladie}
-                variants={maladie.variants}
-                onEdit={handleEdit}
-                onDelete={handleDeleteMaladie}
-                onView={(id) => console.log('View maladie', id)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {currentMaladies.map((maladie: any) => (
+                <MaladieCard
+                  key={maladie.id}
+                  id={maladie.id}
+                  name={maladie.nomMaladie}
+                  variants={maladie.variants}
+                  onEdit={handleEdit}
+                  onDelete={handleDeleteMaladie}
+                  onView={(id) => console.log('View maladie', id)}
+                />
+              ))}
+            </div>
+            
+            {totalPages > 1 && (
+              <Pagination className="mt-6">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => goToPage(currentPage - 1)} 
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {/* First page */}
+                  {currentPage > 2 && (
+                    <PaginationItem>
+                      <PaginationLink onClick={() => goToPage(1)}>1</PaginationLink>
+                    </PaginationItem>
+                  )}
+                  
+                  {/* Ellipsis if needed */}
+                  {currentPage > 3 && (
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )}
+                  
+                  {/* Previous page if not first */}
+                  {currentPage > 1 && (
+                    <PaginationItem>
+                      <PaginationLink onClick={() => goToPage(currentPage - 1)}>
+                        {currentPage - 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+                  
+                  {/* Current page */}
+                  <PaginationItem>
+                    <PaginationLink isActive>{currentPage}</PaginationLink>
+                  </PaginationItem>
+                  
+                  {/* Next page if not last */}
+                  {currentPage < totalPages && (
+                    <PaginationItem>
+                      <PaginationLink onClick={() => goToPage(currentPage + 1)}>
+                        {currentPage + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+                  
+                  {/* Ellipsis if needed */}
+                  {currentPage < totalPages - 2 && (
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )}
+                  
+                  {/* Last page */}
+                  {currentPage < totalPages - 1 && (
+                    <PaginationItem>
+                      <PaginationLink onClick={() => goToPage(totalPages)}>
+                        {totalPages}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => goToPage(currentPage + 1)} 
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center py-10">
             <p className="text-muted-foreground mb-4">Aucune maladie trouvée</p>
