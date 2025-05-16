@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, Depends, HTTPException, Query, Body, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -279,6 +278,14 @@ def read_releves_by_date_range(
     Récupérer les relevés entre deux dates.
     """
     return crud.get_releves_by_date_range(db, start_date=start_date, end_date=end_date, skip=skip, limit=limit)
+
+@API.get("/releves/available-dates/", response_model=List[str], tags=["Releves"])
+def read_available_dates(db: Session = Depends(get_db)):
+    """
+    Récupérer la liste des dates pour lesquelles des relevés existent.
+    """
+    dates = crud.get_available_dates(db)
+    return dates
 
 @API.delete("/releves/range/", tags=["Releves"])
 def delete_releves_by_date_range(

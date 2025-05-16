@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from .models import Maladie, Continent, Symptome, Variant, Traitement, Pays, Regions, Releve
-from sqlalchemy import or_
+from sqlalchemy import or_, func, distinct
 
 # --- CRUD pour Maladie ---
 def create_maladie(db: Session, nomMaladie: str):
@@ -356,3 +356,18 @@ def get_releves_by_region_and_date_range(db: Session, idRegion: int, start_date:
         Releve.dateReleve >= start_date,
         Releve.dateReleve <= end_date
     ).offset(skip).limit(limit).all()
+
+# Nouvelle fonction pour récupérer les dates disponibles
+def get_available_dates(db: Session):
+    """
+    Récupère toutes les dates distinctes pour lesquelles des relevés existent.
+    Retourne une liste de chaînes au format 'YYYY-MM-DD'.
+    """
+    try:
+        # Obtenir les dates distinctes des relevés
+        dates = db.query(distinct(Releve.dateReleve)).order_by(Releve.dateReleve.desc()).all()
+        # Formater les dates en strings YYYY-MM-DD
+        return [date[0].strftime("%Y-%m-%d") for date in dates]
+    except Exception as e:
+        print(f"Erreur lors de la récupération des dates disponibles: {str(e)}")
+        return []

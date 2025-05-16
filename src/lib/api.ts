@@ -188,6 +188,8 @@ export const releves = {
     api.get(`/releves/range/?start_date=${startDate}&end_date=${endDate}`),
   getByRegionAndDateRange: (regionId: number, startDate: string, endDate: string) => 
     api.get(`/releves/region/${regionId}/range/?start_date=${startDate}&end_date=${endDate}`),
+  getByDate: (date: string) => api.get(`/releves/date/${date}`),
+  getAvailableDates: () => api.get('/releves/available-dates/'),
   create: (data: any) => api.post('/releves/', data),
   update: (id: number, data: any) => api.put(`/releves/${id}`, data),
   delete: (id: number) => api.delete(`/releves/${id}`),

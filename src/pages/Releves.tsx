@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { DateRange } from 'react-day-picker';
 import MainLayout from '@/components/layouts/MainLayout';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -13,11 +14,10 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { cn } from '@/lib/utils';
 import { AlertCircle, CalendarIcon, FileBarChart, Loader, Search, ChevronLeft, ChevronRight, ServerCrash, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { releves, maladies, regions, pays, isApiActive, checkApiAvailability } from '@/lib/api';
+import { releves, maladies, regions, isApiActive, checkApiAvailability } from '@/lib/api';
 import { toast } from '@/components/ui/sonner';
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 
@@ -109,6 +109,14 @@ const mockRegionsData: Region[] = [
   { idRegion: 4, nomEtat: "Bavière", idPays: 2 },
 ];
 
+// Données mock pour les dates disponibles
+const mockAvailableDates: string[] = [
+  "2023-01-15",
+  "2023-01-16",
+  "2023-02-01",
+  "2023-03-10"
+];
+
 // Fonction pour formater la date pour l'API
 const formatDateToApi = (date: Date): string => {
   return format(date, 'yyyy-MM-dd');
@@ -125,7 +133,7 @@ export default function Releves() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedRegion, setSelectedRegion] = useState<number | null>(null);
   const [selectedMaladie, setSelectedMaladie] = useState<number | null>(null);
   const [newReleve, setNewReleve] = useState<Omit<Releve, 'idReleve' | 'region' | 'maladie'>>({
@@ -137,12 +145,8 @@ export default function Releves() {
     idMaladie: 0
   });
   
-  // Date range pour filtrer les relevés
-  const today = new Date();
-  const [dateRange, setDateRange] = useState<DateRange>({
-    from: subDays(today, 30), // Par défaut, les 30 derniers jours
-    to: today
-  });
+  // État pour indiquer si les données doivent être chargées
+  const [shouldLoadData, setShouldLoadData] = useState(false);
   
   // Paramètres de pagination
   const itemsPerPage = 10;
@@ -178,37 +182,72 @@ export default function Releves() {
     placeholderData: mockRegionsData,
     staleTime: 60000
   });
-
+  
+  // Récupération des dates disponibles
+  const { 
+    data: availableDates, 
+    isLoading: isLoadingDates,
+    error: datesError,
+    isError: isDatesError
+  } = useQuery({
+    queryKey: ['availableDates'],
+    queryFn: async () => {
+      try {
+        const response = await releves.getAvailableDates();
+        return response.data;
+      } catch (error) {
+        console.error('Erreur lors de la récupération des dates disponibles:', error);
+        return mockAvailableDates;
+      }
+    },
+    placeholderData: mockAvailableDates,
+    staleTime: 300000 // 5 minutes
+  });
+  
+  // Préparation des dates disponibles pour le calendrier
+  const datesMap = new Map<string, boolean>();
+  
+  if (Array.isArray(availableDates)) {
+    availableDates.forEach(dateStr => {
+      datesMap.set(dateStr, true);
+    });
+  }
+  
+  // Fonction pour vérifier si une date contient des données
+  const hasData = (date: Date) => {
+    const formattedDate = formatDateToApi(date);
+    return datesMap.has(formattedDate);
+  };
+  
   // Récupération des données des relevés avec filtre de date
   const { 
     data: relevesData, 
     isLoading: isLoadingReleves, 
     error: relevesError, 
     isError: isRelevesError,
-    refetch: refetchReleves,
-    isFetching: isFetchingReleves
+    refetch: refetchReleves
   } = useQuery({
-    queryKey: ['releves', dateRange.from, dateRange.to, selectedRegion],
+    queryKey: ['releves', selectedDate, selectedRegion, shouldLoadData],
     queryFn: async () => {
-      if (!dateRange.from || !dateRange.to) {
+      if (!selectedDate) {
         return [];
       }
 
       try {
-        const startDate = formatDateToApi(dateRange.from);
-        const endDate = formatDateToApi(dateRange.to);
-
+        const dateStr = formatDateToApi(selectedDate);
+        
         let response;
         if (selectedRegion) {
           response = await releves.getByRegionAndDateRange(
             selectedRegion, 
-            startDate, 
-            endDate
+            dateStr, 
+            dateStr
           );
         } else {
-          response = await releves.getByDateRange(startDate, endDate);
+          response = await releves.getByDate(dateStr);
         }
-        return response.data;
+        
+        return response?.data || [];
       } catch (error) {
         console.error('Erreur lors de la récupération des relevés:', error);
         if (!isApiActive()) {
@@ -217,7 +256,7 @@ export default function Releves() {
         throw error;
       }
     },
-    enabled: !!dateRange.from && !!dateRange.to,
+    enabled: shouldLoadData && !!selectedDate,
     retry: 1,
     refetchOnWindowFocus: false,
     staleTime: 60000 // 1 minute pour éviter trop de requêtes
@@ -229,6 +268,7 @@ export default function Releves() {
     onSuccess: () => {
       toast.success("Relevé ajouté avec succès.");
       queryClient.invalidateQueries({ queryKey: ['releves'] });
+      queryClient.invalidateQueries({ queryKey: ['availableDates'] });
       setIsAddDialogOpen(false);
       resetReleveForm();
     },
@@ -243,6 +283,9 @@ export default function Releves() {
     onSuccess: () => {
       toast.success("Relevé supprimé avec succès.");
       queryClient.invalidateQueries({ queryKey: ['releves'] });
+      queryClient.invalidateQueries({ queryKey: ['availableDates'] });
+      setShouldLoadData(false);
+      setSelectedDate(undefined);
     },
     onError: (error) => {
       toast.error("Impossible de supprimer le relevé.");
@@ -262,13 +305,14 @@ export default function Releves() {
     });
     setSelectedDate(new Date());
   };
-
-  // Gestionnaire de changement de plage de dates
-  const handleDateRangeChange = (range: DateRange | undefined) => {
-    if (range?.from && range?.to) {
-      setDateRange(range);
-      setCurrentPage(1); // Réinitialiser la pagination quand la plage de dates change
+  
+  // Gestionnaire pour charger les données
+  const handleLoadData = () => {
+    if (!selectedDate) {
+      toast.error("Veuillez sélectionner une date avant de charger les données");
+      return;
     }
+    setShouldLoadData(true);
   };
   
   // Filtrer et paginer les données
@@ -317,7 +361,7 @@ export default function Releves() {
     // Mise à jour de la date depuis l'état du sélecteur de date
     const releveToCreate = {
       ...newReleve,
-      dateReleve: formatDateToApi(selectedDate)
+      dateReleve: selectedDate ? formatDateToApi(selectedDate) : format(new Date(), 'yyyy-MM-dd')
     };
     
     createReleveMutation.mutate(releveToCreate);
@@ -329,6 +373,16 @@ export default function Releves() {
     }
   };
 
+  // Fonction pour désactiver les dates sans données
+  const disabledDays = (date: Date) => {
+    return !hasData(date);
+  };
+  
+  // Transformer les dates string en objets Date pour le calendrier
+  const availableDatesObjects = Array.isArray(availableDates) 
+    ? availableDates.map(dateStr => new Date(dateStr))
+    : [];
+  
   // Vérifier si l'API est disponible
   const apiIsActive = isApiActive();
 
@@ -384,6 +438,7 @@ export default function Releves() {
                             selected={selectedDate}
                             onSelect={(date) => date && setSelectedDate(date)}
                             initialFocus
+                            className="pointer-events-auto"
                           />
                         </PopoverContent>
                       </Popover>
@@ -545,71 +600,205 @@ export default function Releves() {
           </Alert>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2">
-            <DateRangePicker 
-              dateRange={dateRange}
-              onDateRangeChange={handleDateRangeChange}
-              className="w-full"
-            />
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher par région ou maladie..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full"
-            />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Select
-            value={selectedRegion?.toString() || ''}
-            onValueChange={(value) => {
-              setSelectedRegion(value ? parseInt(value) : null);
-              setCurrentPage(1);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Filtrer par région" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Toutes les régions</SelectItem>
-              {regionsData?.map((region: Region) => (
-                <SelectItem key={region.idRegion} value={region.idRegion.toString()}>
-                  {region.nomEtat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Select
-            value={selectedMaladie?.toString() || ''}
-            onValueChange={(value) => {
-              setSelectedMaladie(value ? parseInt(value) : null);
-              setCurrentPage(1);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Filtrer par maladie" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Toutes les maladies</SelectItem>
-              {maladiesData?.map((maladie: Maladie) => (
-                <SelectItem key={maladie.idMaladie} value={maladie.idMaladie.toString()}>
-                  {maladie.nomMaladie}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
         <Card>
+          <CardHeader>
+            <CardTitle>Sélection des données</CardTitle>
+            <CardDescription>
+              Choisissez une date pour laquelle des relevés existent, puis cliquez sur "Charger les données"
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Sélectionnez une date avec des relevés</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !selectedDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? (
+                          format(selectedDate, 'dd MMMM yyyy', { locale: fr })
+                        ) : (
+                          <span>Sélectionner une date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+                      {isLoadingDates ? (
+                        <div className="p-4 flex items-center justify-center">
+                          <Loader className="h-5 w-5 animate-spin mr-2" />
+                          <span>Chargement des dates disponibles...</span>
+                        </div>
+                      ) : isDatesError ? (
+                        <div className="p-4 text-red-500">
+                          <AlertCircle className="h-5 w-5 inline mr-2" />
+                          <span>Erreur lors du chargement des dates</span>
+                        </div>
+                      ) : (
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={(date) => {
+                            setSelectedDate(date);
+                            setShouldLoadData(false); // Réinitialiser le chargement des données
+                          }}
+                          disabled={disabledDays}
+                          defaultMonth={availableDatesObjects.length > 0 ? availableDatesObjects[0] : undefined}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      )}
+                      
+                      {!isLoadingDates && availableDates?.length === 0 && (
+                        <div className="p-4 text-center text-muted-foreground">
+                          <AlertCircle className="h-5 w-5 inline mr-2" />
+                          Aucune date avec des relevés n'est disponible
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <div className="text-xs text-muted-foreground">
+                    {isLoadingDates ? (
+                      "Chargement..."
+                    ) : Array.isArray(availableDates) && availableDates.length > 0 ? (
+                      <>Dates disponibles: {availableDates.length}</>
+                    ) : (
+                      <>Aucune date disponible</>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="mt-4 space-y-2">
+                  <label className="text-sm font-medium">Filtrer par région (optionnel)</label>
+                  <Select
+                    value={selectedRegion?.toString() || ''}
+                    onValueChange={(value) => {
+                      setSelectedRegion(value ? parseInt(value) : null);
+                      setShouldLoadData(false);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Toutes les régions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Toutes les régions</SelectItem>
+                      {regionsData?.map((region: Region) => (
+                        <SelectItem key={region.idRegion} value={region.idRegion.toString()}>
+                          {region.nomEtat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="flex flex-col justify-end space-y-4">
+                <Button 
+                  className="w-full" 
+                  onClick={handleLoadData}
+                  disabled={!selectedDate || isLoadingReleves}
+                >
+                  {isLoadingReleves ? (
+                    <>
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      Chargement...
+                    </>
+                  ) : (
+                    <>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      Charger les données
+                    </>
+                  )}
+                </Button>
+                
+                {selectedDate && shouldLoadData && (
+                  <Alert variant="default" className="bg-blue-50 border-blue-200">
+                    <CalendarIcon className="h-4 w-4 text-blue-600" />
+                    <AlertTitle className="text-blue-600">
+                      Date sélectionnée: {format(selectedDate, 'dd MMMM yyyy', { locale: fr })}
+                    </AlertTitle>
+                    {selectedRegion && (
+                      <AlertDescription className="text-blue-700">
+                        Filtré par région: {getRegionName(selectedRegion)}
+                      </AlertDescription>
+                    )}
+                  </Alert>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Affichage des données */}
+        <Card>
+          <CardHeader className="pb-0">
+            {shouldLoadData && (
+              <>
+                <CardTitle>
+                  Relevés du {selectedDate ? format(selectedDate, 'dd MMMM yyyy', { locale: fr }) : ''}
+                </CardTitle>
+                <CardDescription>
+                  {selectedRegion 
+                    ? `Relevés pour la région ${getRegionName(selectedRegion)}` 
+                    : 'Tous relevés pour cette date'}
+                </CardDescription>
+              </>
+            )}
+          </CardHeader>
           <CardContent className="pt-6">
-            {(isLoadingReleves || isFetchingReleves) ? (
+            {/* Options de filtrage pour les résultats */}
+            {shouldLoadData && !isLoadingReleves && paginatedReleves.length > 0 && (
+              <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Rechercher par région ou maladie..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+                
+                <Select
+                  value={selectedMaladie?.toString() || ''}
+                  onValueChange={(value) => {
+                    setSelectedMaladie(value ? parseInt(value) : null);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="md:w-[250px]">
+                    <SelectValue placeholder="Filtrer par maladie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Toutes les maladies</SelectItem>
+                    {maladiesData?.map((maladie: Maladie) => (
+                      <SelectItem key={maladie.idMaladie} value={maladie.idMaladie.toString()}>
+                        {maladie.nomMaladie}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            {!shouldLoadData ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <CalendarIcon className="h-12 w-12 text-primary mb-4" />
+                <h3 className="text-lg font-medium">Aucune donnée chargée</h3>
+                <p className="text-muted-foreground mt-2 max-w-md">
+                  Veuillez sélectionner une date puis cliquer sur "Charger les données" pour afficher les relevés.
+                </p>
+              </div>
+            ) : isLoadingReleves ? (
               <div className="space-y-4">
                 <div className="flex justify-center items-center py-8">
                   <Loader className="h-8 w-8 animate-spin text-primary" />
@@ -655,7 +844,10 @@ export default function Releves() {
                     <li>CORS est activé sur le serveur</li>
                   </ul>
                   <Button 
-                    onClick={() => refetchReleves()} 
+                    onClick={() => {
+                      setShouldLoadData(true);
+                      refetchReleves();
+                    }} 
                     variant="outline" 
                     className="mt-2 w-fit"
                   >
@@ -663,26 +855,21 @@ export default function Releves() {
                   </Button>
                 </AlertDescription>
               </Alert>
-            ) : paginatedReleves.length === 0 && filteredReleves.length === 0 ? (
+            ) : paginatedReleves.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
                 <h3 className="text-lg font-medium">Aucun relevé trouvé</h3>
                 <p className="text-muted-foreground mt-2 max-w-md">
-                  {searchTerm || selectedRegion || selectedMaladie ? (
+                  {searchTerm || selectedMaladie ? (
                     "Aucun relevé ne correspond à vos critères de recherche."
                   ) : (
-                    `Aucun relevé trouvé pour la période du ${dateRange.from?.toLocaleDateString('fr-FR')} au ${dateRange.to?.toLocaleDateString('fr-FR')}.`
+                    `Aucun relevé trouvé pour ${selectedDate ? format(selectedDate, 'dd/MM/yyyy', { locale: fr }) : 'la date sélectionnée'}.`
                   )}
                 </p>
                 <Button 
                   onClick={() => {
                     setSearchTerm('');
-                    setSelectedRegion(null);
                     setSelectedMaladie(null);
-                    setDateRange({
-                      from: subDays(today, 90), // Élargir la période à 90 jours
-                      to: today
-                    });
                   }}
                   variant="outline" 
                   className="mt-4"
