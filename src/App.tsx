@@ -26,8 +26,10 @@ const queryClient = new QueryClient({
       staleTime: 30000, // 30 secondes avant de considérer les données comme obsolètes
       refetchOnWindowFocus: false, // Désactive le rechargement automatique lors du focus
       refetchOnMount: true, // Recharge les données au montage du composant
+    },
+    mutations: {
       onError: (error) => {
-        console.error("Erreur de requête:", error);
+        console.error("Erreur de mutation:", error);
       }
     }
   }
