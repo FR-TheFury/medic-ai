@@ -21,7 +21,8 @@ let corsError = false;
 // Fonction pour vérifier la disponibilité de l'API
 export const checkApiAvailability = async () => {
   try {
-    await api.get('/');
+    // Utiliser la route /maladies/ au lieu de la racine, qui semble ne pas être implémentée
+    await api.get('/maladies/');
     if (!isApiAvailable) {
       toast.success("Connexion à l'API rétablie");
       isApiAvailable = true;
@@ -29,6 +30,8 @@ export const checkApiAvailability = async () => {
     corsError = false;
     return true;
   } catch (error) {
+    console.error('Erreur lors de la vérification de l\'API:', error);
+    
     // Vérifier si c'est une erreur CORS
     if (error.message && (error.message.includes('Network Error') || error.message.includes('CORS'))) {
       corsError = true;
@@ -88,6 +91,12 @@ api.interceptors.response.use(
     if (error.response) {
       console.error('Error status:', error.response.status);
       console.error('Error data:', error.response.data);
+      
+      // Même si on reçoit une erreur 404, on ne considère pas l'API comme indisponible
+      // si on a reçu une réponse du serveur (sauf pour la vérification de disponibilité)
+      if (error.config.url !== '/maladies/' && error.response.status === 404) {
+        return Promise.reject(error);
+      }
     } else if (error.request) {
       console.error('No response received:', error.request);
       // Vérifier si c'est une erreur CORS
@@ -115,6 +124,9 @@ api.interceptors.response.use(
 
 // Vérifier si l'API est en mode CORS error
 export const isCorsError = () => corsError;
+
+// Vérifier si l'API est disponible (pour les composants)
+export const isApiActive = () => isApiAvailable;
 
 // Endpoints d'authentification
 export const auth = {
