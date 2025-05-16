@@ -17,9 +17,19 @@ const api = axios.create({
 // Flag pour suivre l'état de la connexion API
 let isApiAvailable = true;
 let corsError = false;
+let lastCheckTime = 0;
+const CHECK_INTERVAL = 60000; // 60 secondes au lieu de 30
 
 // Fonction pour vérifier la disponibilité de l'API
-export const checkApiAvailability = async () => {
+export const checkApiAvailability = async (force = false) => {
+  const now = Date.now();
+  // Ne vérifier que toutes les 60 secondes sauf si force=true
+  if (!force && now - lastCheckTime < CHECK_INTERVAL) {
+    return isApiAvailable;
+  }
+  
+  lastCheckTime = now;
+  
   try {
     // Utiliser la route /maladies/ au lieu de la racine, qui semble ne pas être implémentée
     await api.get('/maladies/');
@@ -47,16 +57,18 @@ export const checkApiAvailability = async () => {
   }
 };
 
-// Vérification périodique de la disponibilité de l'API (toutes les 30 secondes)
-setInterval(checkApiAvailability, 30000);
+// Vérification périodique de la disponibilité de l'API (toutes les 60 secondes)
+setInterval(() => checkApiAvailability(), CHECK_INTERVAL);
 
 // Ajout d'un intercepteur de requête pour inclure le token d'authentification
 api.interceptors.request.use(
   (config) => {
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
-    // Affichage détaillé des informations de requête
-    if (config.data) {
-      console.log('Request data:', config.data);
+    // Affichage détaillé des informations de requête uniquement en développement
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+      if (config.data) {
+        console.log('Request data:', config.data);
+      }
     }
     
     const token = localStorage.getItem('token');
@@ -78,8 +90,11 @@ api.interceptors.request.use(
 // Ajout d'un intercepteur de réponse pour gérer les erreurs
 api.interceptors.response.use(
   (response) => {
-    console.log(`API Response: ${response.status} for ${response.config.url}`);
-    console.log('Response data:', response.data);
+    // Affichage détaillé des informations de réponse uniquement en développement
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`API Response: ${response.status} for ${response.config.url}`);
+      console.log('Response data:', response.data);
+    }
     // Réinitialiser les flags d'erreur sur réponse réussie
     isApiAvailable = true;
     corsError = false;

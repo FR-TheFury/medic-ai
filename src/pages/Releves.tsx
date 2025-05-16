@@ -1,5 +1,8 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { format, subDays } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { DateRange } from 'react-day-picker';
 import MainLayout from '@/components/layouts/MainLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,16 +11,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { AlertCircle, CalendarIcon, FileBarChart, Loader, Search, ChevronLeft, ChevronRight, ServerCrash } from 'lucide-react';
+import { AlertCircle, CalendarIcon, FileBarChart, Loader, Search, ChevronLeft, ChevronRight, ServerCrash, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { releves, maladies, regions, pays } from '@/lib/api';
-import { toast } from 'sonner';
+import { releves, maladies, regions, pays, isApiActive, checkApiAvailability } from '@/lib/api';
+import { toast } from '@/components/ui/sonner';
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 // Interface pour les modèles
 interface Releve {
@@ -114,6 +115,11 @@ const formatDateToApi = (date: Date): string => {
 
 // Composant principal
 export default function Releves() {
+  // Vérification initiale de la disponibilité de l'API
+  useEffect(() => {
+    checkApiAvailability(true);
+  }, []);
+
   // États
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -130,33 +136,18 @@ export default function Releves() {
     idMaladie: 0
   });
   
-  // État pour suivre si l'API est disponible
-  const [apiMode, setApiMode] = useState(true);
+  // Date range pour filtrer les relevés
+  const today = new Date();
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: subDays(today, 30), // Par défaut, les 30 derniers jours
+    to: today
+  });
   
   // Paramètres de pagination
   const itemsPerPage = 10;
   const queryClient = useQueryClient();
   
-  // Récupération des données
-  const { data: relevesData, isLoading: isLoadingReleves, error: relevesError, isError: isRelevesError } = useQuery({
-    queryKey: ['releves'],
-    queryFn: async () => {
-      try {
-        const response = await releves.getAll();
-        setApiMode(true);
-        return response.data;
-      } catch (error) {
-        console.error('Erreur lors de la récupération des relevés:', error);
-        setApiMode(false);
-        return mockRelevesData;
-      }
-    },
-    retry: 1,
-    refetchOnWindowFocus: false,
-    placeholderData: mockRelevesData, // Données par défaut pour éviter les erreurs
-    staleTime: 60000 // 1 minute pour éviter trop de requêtes
-  });
-  
+  // Récupération des données des régions et maladies
   const { data: maladiesData, isLoading: isLoadingMaladies } = useQuery({
     queryKey: ['maladies'],
     queryFn: async () => {
@@ -185,6 +176,50 @@ export default function Releves() {
     },
     placeholderData: mockRegionsData,
     staleTime: 60000
+  });
+
+  // Récupération des données des relevés avec filtre de date
+  const { 
+    data: relevesData, 
+    isLoading: isLoadingReleves, 
+    error: relevesError, 
+    isError: isRelevesError,
+    refetch: refetchReleves,
+    isFetching: isFetchingReleves
+  } = useQuery({
+    queryKey: ['releves', dateRange.from, dateRange.to, selectedRegion],
+    queryFn: async () => {
+      if (!dateRange.from || !dateRange.to) {
+        return [];
+      }
+
+      try {
+        const startDate = formatDateToApi(dateRange.from);
+        const endDate = formatDateToApi(dateRange.to);
+
+        let response;
+        if (selectedRegion) {
+          response = await releves.getByRegionAndDateRange(
+            selectedRegion, 
+            startDate, 
+            endDate
+          );
+        } else {
+          response = await releves.getByDateRange(startDate, endDate);
+        }
+        return response.data;
+      } catch (error) {
+        console.error('Erreur lors de la récupération des relevés:', error);
+        if (!isApiActive()) {
+          return mockRelevesData;
+        }
+        throw error;
+      }
+    },
+    enabled: !!dateRange.from && !!dateRange.to,
+    retry: 1,
+    refetchOnWindowFocus: false,
+    staleTime: 60000 // 1 minute pour éviter trop de requêtes
   });
   
   // Mutations
@@ -226,6 +261,14 @@ export default function Releves() {
     });
     setSelectedDate(new Date());
   };
+
+  // Gestionnaire de changement de plage de dates
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    if (range?.from && range?.to) {
+      setDateRange(range);
+      setCurrentPage(1); // Réinitialiser la pagination quand la plage de dates change
+    }
+  };
   
   // Filtrer et paginer les données
   const getRegionName = (regionId: number): string => {
@@ -238,22 +281,21 @@ export default function Releves() {
     return maladie ? maladie.nomMaladie : `Maladie #${maladieId}`;
   };
   
-  const dataToUse = Array.isArray(relevesData) ? relevesData : mockRelevesData;
+  const dataToUse = Array.isArray(relevesData) ? relevesData : [];
   
   const filteredReleves = dataToUse.filter((releve: Releve) => {
     // Filtre par terme de recherche sur la région ou maladie
     const regionName = getRegionName(releve.idRegion).toLowerCase();
     const maladieName = getMaladieName(releve.idMaladie).toLowerCase();
     const searchLower = searchTerm.toLowerCase();
-    const searchMatch = !searchTerm || regionName.includes(searchLower) || maladieName.includes(searchLower);
-    
-    // Filtre par région si sélectionnée
-    const regionMatch = !selectedRegion || releve.idRegion === selectedRegion;
+    const searchMatch = !searchTerm || 
+                       regionName.includes(searchLower) || 
+                       maladieName.includes(searchLower);
     
     // Filtre par maladie si sélectionnée
     const maladieMatch = !selectedMaladie || releve.idMaladie === selectedMaladie;
     
-    return searchMatch && regionMatch && maladieMatch;
+    return searchMatch && maladieMatch;
   });
   
   const paginatedReleves = filteredReleves.slice(
@@ -261,7 +303,7 @@ export default function Releves() {
     currentPage * itemsPerPage
   );
   
-  const totalPages = Math.ceil(filteredReleves.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredReleves.length / itemsPerPage));
   
   // Gestionnaires d'événements
   const handleAddReleve = (e: React.FormEvent) => {
@@ -285,6 +327,9 @@ export default function Releves() {
       deleteReleveMutation.mutate(id);
     }
   };
+
+  // Vérifier si l'API est disponible
+  const apiIsActive = isApiActive();
 
   // Rendu du composant
   return (
@@ -489,20 +534,43 @@ export default function Releves() {
           </Dialog>
         </div>
         
+        {!apiIsActive && (
+          <Alert variant="default" className="bg-amber-50 border-amber-200">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-600">Mode hors ligne</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              Impossible de se connecter à l'API. Les données affichées sont des exemples. Vérifiez que l'API est en cours d'exécution.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <DateRangePicker 
+              dateRange={dateRange}
+              onDateRangeChange={handleDateRangeChange}
+              className="w-full"
+            />
+          </div>
+          
           <div className="flex items-center space-x-2">
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Rechercher..."
+              placeholder="Rechercher par région ou maladie..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full"
             />
           </div>
-          
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Select
             value={selectedRegion?.toString() || ''}
-            onValueChange={(value) => setSelectedRegion(value ? parseInt(value) : null)}
+            onValueChange={(value) => {
+              setSelectedRegion(value ? parseInt(value) : null);
+              setCurrentPage(1);
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Filtrer par région" />
@@ -519,7 +587,10 @@ export default function Releves() {
           
           <Select
             value={selectedMaladie?.toString() || ''}
-            onValueChange={(value) => setSelectedMaladie(value ? parseInt(value) : null)}
+            onValueChange={(value) => {
+              setSelectedMaladie(value ? parseInt(value) : null);
+              setCurrentPage(1);
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Filtrer par maladie" />
@@ -535,82 +606,13 @@ export default function Releves() {
           </Select>
         </div>
         
-        {!apiMode && (
-          <Alert variant="default" className="bg-amber-50 border-amber-200">
-            <AlertCircle className="h-4 w-4 text-amber-600" />
-            <AlertTitle className="text-amber-600">Mode hors ligne</AlertTitle>
-            <AlertDescription className="text-amber-700">
-              Impossible de se connecter à l'API. Les données affichées sont des exemples. Vérifiez que l'API est en cours d'exécution.
-            </AlertDescription>
-          </Alert>
-        )}
-        
         <Card>
-          {isRelevesError && apiMode ? (
-            <CardContent className="pt-6">
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Erreur de connexion</AlertTitle>
-                <AlertDescription className="flex flex-col gap-2">
-                  <p>Impossible de charger les relevés. Vérifiez que:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Le serveur FastAPI est démarré à l'adresse http://127.0.0.1:8000</li>
-                    <li>Les routes API sont configurées correctement</li>
-                    <li>CORS est activé sur le serveur</li>
-                  </ul>
-                </AlertDescription>
-              </Alert>
-              
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <ServerCrash className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium">Erreur de connexion à l'API</h3>
-                <p className="text-muted-foreground mt-2 max-w-md">
-                  L'application affiche des données d'exemple en attendant que la connexion à l'API soit rétablie.
-                </p>
-              </div>
-              
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[80px]">ID</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Région</TableHead>
-                    <TableHead>Maladie</TableHead>
-                    <TableHead>Nouveaux cas</TableHead>
-                    <TableHead>Décès</TableHead>
-                    <TableHead>Guérisons</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockRelevesData.map((releve: Releve) => (
-                    <TableRow key={releve.idReleve}>
-                      <TableCell>{releve.idReleve}</TableCell>
-                      <TableCell>
-                        {new Date(releve.dateReleve).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>{getRegionName(releve.idRegion)}</TableCell>
-                      <TableCell>{getMaladieName(releve.idMaladie)}</TableCell>
-                      <TableCell>{releve.nbNouveauCas?.toLocaleString() || 0}</TableCell>
-                      <TableCell>{releve.nbDeces?.toLocaleString() || 0}</TableCell>
-                      <TableCell>{releve.nbGueri?.toLocaleString() || 0}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          disabled={true}
-                        >
-                          Supprimer
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          ) : (
-            <>
-              <CardContent className="pt-6">
+          <CardContent className="pt-6">
+            {(isLoadingReleves || isFetchingReleves) ? (
+              <div className="space-y-4">
+                <div className="flex justify-center items-center py-8">
+                  <Loader className="h-8 w-8 animate-spin text-primary" />
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -625,101 +627,165 @@ export default function Releves() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {isLoadingReleves || isLoadingRegions || isLoadingMaladies ? (
-                      Array.from({ length: 5 }).map((_, index) => (
-                        <TableRow key={`skeleton-${index}`}>
-                          <TableCell><Skeleton className="h-5 w-12" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                          <TableCell className="text-right"><Skeleton className="h-9 w-20 ml-auto" /></TableCell>
-                        </TableRow>
-                      ))
-                    ) : paginatedReleves.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
-                          {searchTerm || selectedRegion || selectedMaladie 
-                            ? "Aucun relevé trouvé avec ces critères" 
-                            : "Aucun relevé disponible"}
-                        </TableCell>
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <TableRow key={`skeleton-${index}`}>
+                        <TableCell><Skeleton className="h-5 w-12" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-9 w-20 ml-auto" /></TableCell>
                       </TableRow>
-                    ) : (
-                      paginatedReleves.map((releve: Releve) => (
-                        <TableRow key={releve.idReleve}>
-                          <TableCell>{releve.idReleve}</TableCell>
-                          <TableCell>
-                            {new Date(releve.dateReleve).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>{getRegionName(releve.idRegion)}</TableCell>
-                          <TableCell>{getMaladieName(releve.idMaladie)}</TableCell>
-                          <TableCell>{releve.nbNouveauCas?.toLocaleString() || 0}</TableCell>
-                          <TableCell>{releve.nbDeces?.toLocaleString() || 0}</TableCell>
-                          <TableCell>{releve.nbGueri?.toLocaleString() || 0}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteReleve(releve.idReleve)}
-                              disabled={deleteReleveMutation.isPending || !apiMode}
-                            >
-                              {deleteReleveMutation.isPending && deleteReleveMutation.variables === releve.idReleve ? (
-                                <Loader className="h-4 w-4 animate-spin" />
-                              ) : (
-                                "Supprimer"
-                              )}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
+                    ))}
                   </TableBody>
                 </Table>
-              </CardContent>
-              {totalPages > 1 && (
-                <CardFooter>
-                  <Pagination className="w-full">
-                    <PaginationContent>
-                      <PaginationItem>
-                        {currentPage === 1 ? (
-                          <Button variant="outline" size="icon" disabled className="cursor-not-allowed opacity-50">
+              </div>
+            ) : isRelevesError && apiIsActive ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Erreur de connexion</AlertTitle>
+                <AlertDescription className="flex flex-col gap-2">
+                  <p>Impossible de charger les relevés. Vérifiez que:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Le serveur FastAPI est démarré à l'adresse http://127.0.0.1:8000</li>
+                    <li>Les routes API sont configurées correctement</li>
+                    <li>CORS est activé sur le serveur</li>
+                  </ul>
+                  <Button 
+                    onClick={() => refetchReleves()} 
+                    variant="outline" 
+                    className="mt-2 w-fit"
+                  >
+                    Réessayer
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : paginatedReleves.length === 0 && filteredReleves.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
+                <h3 className="text-lg font-medium">Aucun relevé trouvé</h3>
+                <p className="text-muted-foreground mt-2 max-w-md">
+                  {searchTerm || selectedRegion || selectedMaladie ? (
+                    "Aucun relevé ne correspond à vos critères de recherche."
+                  ) : (
+                    `Aucun relevé trouvé pour la période du ${dateRange.from?.toLocaleDateString('fr-FR')} au ${dateRange.to?.toLocaleDateString('fr-FR')}.`
+                  )}
+                </p>
+                <Button 
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedRegion(null);
+                    setSelectedMaladie(null);
+                    setDateRange({
+                      from: subDays(today, 90), // Élargir la période à 90 jours
+                      to: today
+                    });
+                  }}
+                  variant="outline" 
+                  className="mt-4"
+                >
+                  Réinitialiser les filtres
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[80px]">ID</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Région</TableHead>
+                      <TableHead>Maladie</TableHead>
+                      <TableHead>Nouveaux cas</TableHead>
+                      <TableHead>Décès</TableHead>
+                      <TableHead>Guérisons</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedReleves.map((releve: Releve) => (
+                      <TableRow key={releve.idReleve}>
+                        <TableCell>{releve.idReleve}</TableCell>
+                        <TableCell>
+                          {new Date(releve.dateReleve).toLocaleDateString('fr-FR')}
+                        </TableCell>
+                        <TableCell>{getRegionName(releve.idRegion)}</TableCell>
+                        <TableCell>{getMaladieName(releve.idMaladie)}</TableCell>
+                        <TableCell>{releve.nbNouveauCas?.toLocaleString('fr-FR') || 0}</TableCell>
+                        <TableCell>{releve.nbDeces?.toLocaleString('fr-FR') || 0}</TableCell>
+                        <TableCell>{releve.nbGueri?.toLocaleString('fr-FR') || 0}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteReleve(releve.idReleve)}
+                            disabled={deleteReleveMutation.isPending || !apiIsActive}
+                          >
+                            {deleteReleveMutation.isPending && deleteReleveMutation.variables === releve.idReleve ? (
+                              <Loader className="h-4 w-4 animate-spin" />
+                            ) : (
+                              "Supprimer"
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                
+                {totalPages > 1 && (
+                  <div className="mt-4">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          >
                             <span className="sr-only">Page précédente</span>
                             <ChevronLeft className="h-4 w-4" />
                           </Button>
-                        ) : (
-                          <PaginationPrevious onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} />
-                        )}
-                      </PaginationItem>
-                      
-                      {[...Array(totalPages)].map((_, i) => (
-                        <PaginationItem key={i}>
-                          <PaginationLink
-                            isActive={currentPage === i + 1}
-                            onClick={() => setCurrentPage(i + 1)}
-                          >
-                            {i + 1}
-                          </PaginationLink>
                         </PaginationItem>
-                      )).slice(Math.max(0, currentPage - 3), Math.min(totalPages, currentPage + 2))}
-                      
-                      <PaginationItem>
-                        {currentPage === totalPages ? (
-                          <Button variant="outline" size="icon" disabled className="cursor-not-allowed opacity-50">
+                        
+                        {Array.from({ length: totalPages }, (_, i) => (
+                          <PaginationItem key={i} className={currentPage === i + 1 ? "hidden sm:inline-block" : "hidden sm:inline-block"}>
+                            <PaginationLink
+                              isActive={currentPage === i + 1}
+                              onClick={() => setCurrentPage(i + 1)}
+                            >
+                              {i + 1}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )).slice(
+                          Math.max(0, Math.min(currentPage - 2, totalPages - 3)),
+                          Math.min(totalPages, Math.max(3, currentPage + 1))
+                        )}
+                        
+                        <PaginationItem>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          >
                             <span className="sr-only">Page suivante</span>
                             <ChevronRight className="h-4 w-4" />
                           </Button>
-                        ) : (
-                          <PaginationNext onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} />
-                        )}
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </CardFooter>
-              )}
-            </>
-          )}
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                    <p className="text-center text-sm text-muted-foreground mt-2">
+                      Page {currentPage} sur {totalPages}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
         </Card>
       </div>
     </MainLayout>

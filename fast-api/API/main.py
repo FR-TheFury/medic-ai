@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI, Depends, HTTPException, Query, Body, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -83,11 +84,13 @@ API.add_middleware(
         "http://127.0.0.1:8080", 
         "http://127.0.0.1:5173",
         "http://localhost:8081",  # Ajout du port 8081
-        "http://127.0.0.1:8081"   # Ajout du port 8081 avec IP
+        "http://127.0.0.1:8081",   # Ajout du port 8081 avec IP
+        "*"  # Autoriser toutes les origines pour les tests (à utiliser avec précaution en production)
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Autoriser toutes les méthodes
+    allow_headers=["*"],  # Autoriser tous les en-têtes
+    expose_headers=["*"],  # Exposer tous les en-têtes
 )
 
 # ------------------ Dépendance DB ------------------
@@ -97,6 +100,13 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# ... keep existing code (définitions des modèles Pydantic, routes génériques et autres endpoints API) ...
+
+# Ajouter une route racine pour faciliter la vérification de l'API
+@API.get("/")
+def read_root():
+    return {"status": "online", "message": "L'API fonctionne correctement"}
 
 # ------------------ Pydantic Schemas ------------------
 class MaladieBase(BaseModel):
