@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { format, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -19,6 +18,8 @@ import { toast } from '@/components/ui/sonner';
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 // Interface pour les modèles
 interface Releve {
