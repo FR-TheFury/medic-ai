@@ -24,8 +24,8 @@ interface Pays {
   populationTotale?: number;
   continent?: string;
   codeISO?: string;
-  latitudePays?: number;
-  longitudePays?: number;
+  latitudePays?: number | null | string;
+  longitudePays?: number | null | string;
   Superficie?: number;
   densitePopulation?: number;
   idContinent?: number;
@@ -39,6 +39,22 @@ const mockPaysData: Pays[] = [
   { id: 4, nomPays: "États-Unis", isoPays: "US", populationTotale: 329000000, continent: "Amérique du Nord", latitudePays: 37.09024, longitudePays: -95.712891, Superficie: 9372610, densitePopulation: 35.1, idContinent: 2 },
   { id: 5, nomPays: "Japon", isoPays: "JP", populationTotale: 126000000, continent: "Asie", latitudePays: 36.204824, longitudePays: 138.252924, Superficie: 377975, densitePopulation: 333.6, idContinent: 3 },
 ];
+
+// Fonction utilitaire pour normaliser les coordonnées
+const normalizeCoordinate = (value: any): number | null => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+};
+
+// Fonction pour formatter les coordonnées avec sécurité
+const formatCoordinate = (value: any): string => {
+  const normalized = normalizeCoordinate(value);
+  return normalized !== null ? normalized.toFixed(2) : '-';
+};
 
 export default function Pays() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -69,8 +85,16 @@ export default function Pays() {
       try {
         const response = await pays.getAll();
         console.log('Réponse API pays:', response.data);
+        
+        // Normaliser les données
+        const normalizedData = Array.isArray(response.data) ? response.data.map((pays: Pays) => ({
+          ...pays,
+          latitudePays: normalizeCoordinate(pays.latitudePays),
+          longitudePays: normalizeCoordinate(pays.longitudePays)
+        })) : [];
+        
         setApiMode(true);
-        return response.data;
+        return normalizedData;
       } catch (err) {
         console.error('Erreur API lors de la récupération des pays:', err);
         // En cas d'erreur, on utilise les données de test mais on continue d'afficher la page
@@ -380,10 +404,10 @@ export default function Pays() {
                       <TableCell>{pays.Superficie?.toLocaleString() || '-'}</TableCell>
                       <TableCell>{pays.densitePopulation?.toLocaleString() || '-'}</TableCell>
                       <TableCell>
-                        {pays.latitudePays && pays.longitudePays ? (
+                        {pays.latitudePays !== undefined && pays.longitudePays !== undefined ? (
                           <div className="flex items-center">
                             <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                            {pays.latitudePays.toFixed(2)}, {pays.longitudePays.toFixed(2)}
+                            {formatCoordinate(pays.latitudePays)}, {formatCoordinate(pays.longitudePays)}
                           </div>
                         ) : '-'}
                       </TableCell>
@@ -451,10 +475,11 @@ export default function Pays() {
                           <TableCell>{pays.Superficie?.toLocaleString() || '-'}</TableCell>
                           <TableCell>{pays.densitePopulation?.toLocaleString() || '-'}</TableCell>
                           <TableCell>
-                            {pays.latitudePays && pays.longitudePays ? (
+                            {(pays.latitudePays !== undefined && pays.latitudePays !== null) && 
+                             (pays.longitudePays !== undefined && pays.longitudePays !== null) ? (
                               <div className="flex items-center">
                                 <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                                {pays.latitudePays.toFixed(2)}, {pays.longitudePays.toFixed(2)}
+                                {formatCoordinate(pays.latitudePays)}, {formatCoordinate(pays.longitudePays)}
                               </div>
                             ) : '-'}
                           </TableCell>
