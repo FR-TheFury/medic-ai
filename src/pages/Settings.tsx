@@ -20,7 +20,7 @@ export default function Settings() {
   
   // General settings
   const [generalSettings, setGeneralSettings] = useState({
-    apiEndpoint: 'http://localhost:8000',
+    apiEndpoint: 'http://127.0.0.1:8000',
     theme: 'light',
     language: 'fr',
     notifications: true,
@@ -122,7 +122,7 @@ export default function Settings() {
                       onChange={(e) => handleGeneralChange('apiEndpoint', e.target.value)}
                     />
                     <p className="text-sm text-muted-foreground">
-                      L'URL de base de l'API Python (ex: http://localhost:8000)
+                      L'URL de base de l'API Python (ex: http://127.0.0.1:8000)
                     </p>
                   </div>
                   
