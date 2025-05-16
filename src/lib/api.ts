@@ -1,7 +1,7 @@
 
 // API client pour communiquer avec le backend Python
 import axios from 'axios';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 
 // Création d'une instance axios avec l'URL de base
 const api = axios.create({
@@ -11,6 +11,27 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Flag pour suivre l'état de la connexion API
+let isApiAvailable = true;
+
+// Fonction pour vérifier la disponibilité de l'API
+export const checkApiAvailability = async () => {
+  try {
+    await api.get('/');
+    if (!isApiAvailable) {
+      toast.success("Connexion à l'API rétablie");
+      isApiAvailable = true;
+    }
+    return true;
+  } catch (error) {
+    if (isApiAvailable) {
+      toast.error("L'API n'est pas disponible. Utilisation des données de démonstration.");
+      isApiAvailable = false;
+    }
+    return false;
+  }
+};
 
 // Ajout d'un intercepteur de requête pour inclure le token d'authentification
 api.interceptors.request.use(
@@ -52,8 +73,15 @@ api.interceptors.response.use(
       console.error('Error message:', error.message);
     }
     
-    const message = error.response?.data?.detail || 'Une erreur est survenue';
-    toast.error("Erreur API: " + message);
+    // Vérifier si l'erreur est liée à un problème de connexion
+    if (error.code === 'ECONNABORTED' || !error.response) {
+      toast.error("Impossible de se connecter à l'API. Vérifiez que le serveur est en cours d'exécution.");
+      isApiAvailable = false;
+    } else {
+      const message = error.response?.data?.detail || 'Une erreur est survenue';
+      toast.error("Erreur API: " + message);
+    }
+    
     return Promise.reject(error);
   }
 );

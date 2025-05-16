@@ -18,7 +18,20 @@ import MSPR from "./pages/MSPR";
 import Pays from "./pages/Pays";
 import Releves from "./pages/Releves";
 
-const queryClient = new QueryClient();
+// Configuration du client React Query avec de meilleurs paramètres par défaut
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1, // Limite les tentatives de requête
+      staleTime: 30000, // 30 secondes avant de considérer les données comme obsolètes
+      refetchOnWindowFocus: false, // Désactive le rechargement automatique lors du focus
+      refetchOnMount: true, // Recharge les données au montage du composant
+      onError: (error) => {
+        console.error("Erreur de requête:", error);
+      }
+    }
+  }
+});
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
