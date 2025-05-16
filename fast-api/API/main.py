@@ -5,10 +5,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Union
 from datetime import date
 from decimal import Decimal
-import joblib
 import pandas as pd
-from functools import lru_cache
-from pathlib import Path
 import pickle
 from fastapi import HTTPException
 from functools import lru_cache
