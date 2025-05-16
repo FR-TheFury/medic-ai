@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { checkApiAvailability } from "@/lib/api";
+import { useEffect } from "react";
 
 // Pages
 import Login from "./pages/Login";
@@ -26,8 +28,13 @@ const queryClient = new QueryClient({
       staleTime: 30000, // 30 secondes avant de considérer les données comme obsolètes
       refetchOnWindowFocus: false, // Désactive le rechargement automatique lors du focus
       refetchOnMount: true, // Recharge les données au montage du composant
+      // Gestion globale des erreurs de requêtes
+      onError: (error: any) => {
+        console.error("Erreur de requête:", error);
+      }
     },
     mutations: {
+      // Gestion des erreurs pour les mutations
       onError: (error) => {
         console.error("Erreur de mutation:", error);
       }
@@ -38,6 +45,11 @@ const queryClient = new QueryClient({
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  
+  // Vérification de l'API au chargement du composant
+  useEffect(() => {
+    checkApiAvailability();
+  }, []);
   
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
@@ -111,17 +123,24 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  // Vérification initiale de la disponibilité de l'API
+  useEffect(() => {
+    checkApiAvailability();
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

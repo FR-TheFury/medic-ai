@@ -10,10 +10,13 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Configuration pour gérer les problèmes CORS
+  withCredentials: false, // Désactiver l'envoi des cookies pour éviter des problèmes CORS
 });
 
 // Flag pour suivre l'état de la connexion API
 let isApiAvailable = true;
+let corsError = false;
 
 // Fonction pour vérifier la disponibilité de l'API
 export const checkApiAvailability = async () => {
@@ -23,8 +26,16 @@ export const checkApiAvailability = async () => {
       toast.success("Connexion à l'API rétablie");
       isApiAvailable = true;
     }
+    corsError = false;
     return true;
   } catch (error) {
+    // Vérifier si c'est une erreur CORS
+    if (error.message && (error.message.includes('Network Error') || error.message.includes('CORS'))) {
+      corsError = true;
+      console.error('Erreur CORS détectée:', error);
+      toast.error("Erreur CORS: Vérifiez la configuration du serveur");
+    }
+    
     if (isApiAvailable) {
       toast.error("L'API n'est pas disponible. Utilisation des données de démonstration.");
       isApiAvailable = false;
@@ -32,6 +43,9 @@ export const checkApiAvailability = async () => {
     return false;
   }
 };
+
+// Vérification périodique de la disponibilité de l'API (toutes les 30 secondes)
+setInterval(checkApiAvailability, 30000);
 
 // Ajout d'un intercepteur de requête pour inclure le token d'authentification
 api.interceptors.request.use(
@@ -46,6 +60,10 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Ajout d'un en-tête pour permettre CORS
+    config.headers['Access-Control-Allow-Origin'] = '*';
+    
     return config;
   },
   (error) => {
@@ -59,6 +77,9 @@ api.interceptors.response.use(
   (response) => {
     console.log(`API Response: ${response.status} for ${response.config.url}`);
     console.log('Response data:', response.data);
+    // Réinitialiser les flags d'erreur sur réponse réussie
+    isApiAvailable = true;
+    corsError = false;
     return response;
   },
   (error) => {
@@ -69,6 +90,12 @@ api.interceptors.response.use(
       console.error('Error data:', error.response.data);
     } else if (error.request) {
       console.error('No response received:', error.request);
+      // Vérifier si c'est une erreur CORS
+      if (error.message && (error.message.includes('Network Error') || error.message.includes('CORS'))) {
+        corsError = true;
+        console.error('Erreur CORS détectée dans la réponse');
+        toast.error("Erreur CORS: Vérifiez la configuration du serveur FastAPI");
+      }
     } else {
       console.error('Error message:', error.message);
     }
@@ -85,6 +112,9 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Vérifier si l'API est en mode CORS error
+export const isCorsError = () => corsError;
 
 // Endpoints d'authentification
 export const auth = {
