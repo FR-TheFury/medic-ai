@@ -11,7 +11,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { AlertCircle, Flag, Loader, MapPin, Search, ChevronLeft, ChevronRight, Globe, ServerCrash } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { pays } from '@/lib/api';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -31,6 +31,15 @@ interface Pays {
   idContinent?: number;
 }
 
+// Données mock pour les pays (utilisées en cas d'erreur API)
+const mockPaysData: Pays[] = [
+  { id: 1, nomPays: "France", isoPays: "FR", populationTotale: 67000000, continent: "Europe", latitudePays: 46.603354, longitudePays: 1.888334, Superficie: 551695, densitePopulation: 123.1, idContinent: 1 },
+  { id: 2, nomPays: "Allemagne", isoPays: "DE", populationTotale: 83000000, continent: "Europe", latitudePays: 51.165691, longitudePays: 10.451526, Superficie: 357022, densitePopulation: 232.8, idContinent: 1 },
+  { id: 3, nomPays: "Espagne", isoPays: "ES", populationTotale: 46000000, continent: "Europe", latitudePays: 40.463667, longitudePays: -3.74922, Superficie: 505990, densitePopulation: 91.1, idContinent: 1 },
+  { id: 4, nomPays: "États-Unis", isoPays: "US", populationTotale: 329000000, continent: "Amérique du Nord", latitudePays: 37.09024, longitudePays: -95.712891, Superficie: 9372610, densitePopulation: 35.1, idContinent: 2 },
+  { id: 5, nomPays: "Japon", isoPays: "JP", populationTotale: 126000000, continent: "Asie", latitudePays: 36.204824, longitudePays: 138.252924, Superficie: 377975, densitePopulation: 333.6, idContinent: 3 },
+];
+
 export default function Pays() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -47,26 +56,13 @@ export default function Pays() {
     densitePopulation: undefined,
     idContinent: undefined
   });
-  const [mockData, setMockData] = useState<Pays[]>([]);
   const [apiMode, setApiMode] = useState(true);
   
   const itemsPerPage = 10;
   const queryClient = useQueryClient();
   
-  useEffect(() => {
-    // Données de test si l'API n'est pas disponible
-    const mockPaysData: Pays[] = [
-      { id: 1, nomPays: "France", isoPays: "FR", populationTotale: 67000000, continent: "Europe", latitudePays: 46.603354, longitudePays: 1.888334, Superficie: 551695, densitePopulation: 123.1, idContinent: 1 },
-      { id: 2, nomPays: "Allemagne", isoPays: "DE", populationTotale: 83000000, continent: "Europe", latitudePays: 51.165691, longitudePays: 10.451526, Superficie: 357022, densitePopulation: 232.8, idContinent: 1 },
-      { id: 3, nomPays: "Espagne", isoPays: "ES", populationTotale: 46000000, continent: "Europe", latitudePays: 40.463667, longitudePays: -3.74922, Superficie: 505990, densitePopulation: 91.1, idContinent: 1 },
-      { id: 4, nomPays: "États-Unis", isoPays: "US", populationTotale: 329000000, continent: "Amérique du Nord", latitudePays: 37.09024, longitudePays: -95.712891, Superficie: 9372610, densitePopulation: 35.1, idContinent: 2 },
-      { id: 5, nomPays: "Japon", isoPays: "JP", populationTotale: 126000000, continent: "Asie", latitudePays: 36.204824, longitudePays: 138.252924, Superficie: 377975, densitePopulation: 333.6, idContinent: 3 },
-    ];
-    setMockData(mockPaysData);
-  }, []);
-  
-  // Fetch pays data with error handling
-  const { data: paysData, isLoading, error } = useQuery({
+  // Fetch pays data with error handling - optimized query configuration
+  const { data: paysData, isLoading, error, isError } = useQuery({
     queryKey: ['pays'],
     queryFn: async () => {
       console.log('Appel API: Récupération des pays');
@@ -79,22 +75,22 @@ export default function Pays() {
         console.error('Erreur API lors de la récupération des pays:', err);
         // En cas d'erreur, on utilise les données de test mais on continue d'afficher la page
         setApiMode(false);
-        return mockData;
+        return mockPaysData;
       }
     },
     retry: 1,
-    // Ne pas refaire la requête trop souvent en cas d'erreur
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    // Ajouter un fallback pour éviter des erreurs dans le rendu
+    placeholderData: mockPaysData,
+    // Augmenter le staleTime pour éviter trop de requêtes
+    staleTime: 60000
   });
   
   // Create new pays mutation
   const createPaysMutation = useMutation({
     mutationFn: (data: Omit<Pays, 'id'>) => pays.create(data),
     onSuccess: () => {
-      toast({
-        title: "Pays ajouté",
-        description: "Le pays a été ajouté avec succès."
-      });
+      toast.success("Pays ajouté avec succès.");
       queryClient.invalidateQueries({ queryKey: ['pays'] });
       setIsAddDialogOpen(false);
       setNewPays({
@@ -111,11 +107,7 @@ export default function Pays() {
       });
     },
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Impossible d'ajouter le pays."
-      });
+      toast.error("Impossible d'ajouter le pays.");
       console.error("Erreur lors de l'ajout du pays:", error);
     }
   });
@@ -124,24 +116,19 @@ export default function Pays() {
   const deletePaysMutation = useMutation({
     mutationFn: (id: number) => pays.delete(id),
     onSuccess: () => {
-      toast({
-        title: "Pays supprimé",
-        description: "Le pays a été supprimé avec succès."
-      });
+      toast.success("Pays supprimé avec succès.");
       queryClient.invalidateQueries({ queryKey: ['pays'] });
     },
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Impossible de supprimer le pays."
-      });
+      toast.error("Impossible de supprimer le pays.");
       console.error("Erreur lors de la suppression du pays:", error);
     }
   });
   
+  // S'assurer que dataToUse est toujours un tableau, même en cas d'erreur
+  const dataToUse = Array.isArray(paysData) ? paysData : mockPaysData;
+  
   // Filter and paginate pays
-  const dataToUse = paysData || mockData;
   const filteredPays = dataToUse.filter(
     (pays: Pays) => pays.nomPays.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -157,11 +144,7 @@ export default function Pays() {
   const handleAddPays = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPays.nomPays) {
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Le nom du pays est requis."
-      });
+      toast.error("Le nom du pays est requis.");
       return;
     }
     createPaysMutation.mutate(newPays);
@@ -350,7 +333,7 @@ export default function Pays() {
         )}
         
         <Card>
-          {error && apiMode ? (
+          {isError && apiMode ? (
             <CardContent className="pt-6">
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
@@ -372,6 +355,52 @@ export default function Pays() {
                   L'application affiche des données d'exemple en attendant que la connexion à l'API soit rétablie.
                 </p>
               </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px]">ID</TableHead>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Code ISO</TableHead>
+                    <TableHead>Population</TableHead>
+                    <TableHead>Continent</TableHead>
+                    <TableHead>Superficie</TableHead>
+                    <TableHead>Densité</TableHead>
+                    <TableHead>Coordonnées</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mockPaysData.map((pays: Pays) => (
+                    <TableRow key={pays.id}>
+                      <TableCell>{pays.id}</TableCell>
+                      <TableCell className="font-medium">{pays.nomPays}</TableCell>
+                      <TableCell>{pays.isoPays || pays.codeISO || '-'}</TableCell>
+                      <TableCell>{(pays.populationTotale || pays.population)?.toLocaleString() || '-'}</TableCell>
+                      <TableCell>{pays.continent || '-'}</TableCell>
+                      <TableCell>{pays.Superficie?.toLocaleString() || '-'}</TableCell>
+                      <TableCell>{pays.densitePopulation?.toLocaleString() || '-'}</TableCell>
+                      <TableCell>
+                        {pays.latitudePays && pays.longitudePays ? (
+                          <div className="flex items-center">
+                            <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
+                            {pays.latitudePays.toFixed(2)}, {pays.longitudePays.toFixed(2)}
+                          </div>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeletePays(pays.id)}
+                          disabled={true}
+                        >
+                          Supprimer
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           ) : (
             <>

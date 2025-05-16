@@ -12,10 +12,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { AlertCircle, CalendarIcon, FileBarChart, Loader, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertCircle, CalendarIcon, FileBarChart, Loader, Search, ChevronLeft, ChevronRight, ServerCrash } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { releves, maladies, regions, pays } from '@/lib/api';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -55,6 +55,58 @@ interface Maladie {
   nomMaladie: string;
 }
 
+// Données mock pour les relevés (utilisées en cas d'erreur API)
+const mockRelevesData: Releve[] = [
+  {
+    idReleve: 1,
+    dateReleve: "2023-01-15",
+    nbNouveauCas: 1245,
+    nbDeces: 45,
+    nbGueri: 980,
+    nbHospitalisation: 230,
+    nbHospiSoinsIntensif: 85,
+    idRegion: 1,
+    idMaladie: 1
+  },
+  {
+    idReleve: 2,
+    dateReleve: "2023-01-16",
+    nbNouveauCas: 1120,
+    nbDeces: 38,
+    nbGueri: 1050,
+    nbHospitalisation: 210,
+    nbHospiSoinsIntensif: 75,
+    idRegion: 1,
+    idMaladie: 1
+  },
+  {
+    idReleve: 3,
+    dateReleve: "2023-01-15",
+    nbNouveauCas: 890,
+    nbDeces: 25,
+    nbGueri: 760,
+    nbHospitalisation: 150,
+    nbHospiSoinsIntensif: 45,
+    idRegion: 2,
+    idMaladie: 1
+  },
+];
+
+// Données mock pour les maladies
+const mockMaladiesData: Maladie[] = [
+  { idMaladie: 1, nomMaladie: "COVID-19" },
+  { idMaladie: 2, nomMaladie: "Grippe" },
+  { idMaladie: 3, nomMaladie: "Pneumonie" },
+];
+
+// Données mock pour les régions
+const mockRegionsData: Region[] = [
+  { idRegion: 1, nomEtat: "Île-de-France", idPays: 1 },
+  { idRegion: 2, nomEtat: "Occitanie", idPays: 1 },
+  { idRegion: 3, nomEtat: "Auvergne-Rhône-Alpes", idPays: 1 },
+  { idRegion: 4, nomEtat: "Bavière", idPays: 2 },
+];
+
 // Fonction pour formater la date pour l'API
 const formatDateToApi = (date: Date): string => {
   return format(date, 'yyyy-MM-dd');
@@ -78,53 +130,74 @@ export default function Releves() {
     idMaladie: 0
   });
   
+  // État pour suivre si l'API est disponible
+  const [apiMode, setApiMode] = useState(true);
+  
   // Paramètres de pagination
   const itemsPerPage = 10;
   const queryClient = useQueryClient();
   
   // Récupération des données
-  const { data: relevesData, isLoading: isLoadingReleves, error: relevesError } = useQuery({
+  const { data: relevesData, isLoading: isLoadingReleves, error: relevesError, isError: isRelevesError } = useQuery({
     queryKey: ['releves'],
     queryFn: async () => {
-      const response = await releves.getAll();
-      return response.data;
-    }
+      try {
+        const response = await releves.getAll();
+        setApiMode(true);
+        return response.data;
+      } catch (error) {
+        console.error('Erreur lors de la récupération des relevés:', error);
+        setApiMode(false);
+        return mockRelevesData;
+      }
+    },
+    retry: 1,
+    refetchOnWindowFocus: false,
+    placeholderData: mockRelevesData, // Données par défaut pour éviter les erreurs
+    staleTime: 60000 // 1 minute pour éviter trop de requêtes
   });
   
   const { data: maladiesData, isLoading: isLoadingMaladies } = useQuery({
     queryKey: ['maladies'],
     queryFn: async () => {
-      const response = await maladies.getAll();
-      return response.data;
-    }
+      try {
+        const response = await maladies.getAll();
+        return response.data;
+      } catch (error) {
+        console.error('Erreur lors de la récupération des maladies:', error);
+        return mockMaladiesData;
+      }
+    },
+    placeholderData: mockMaladiesData,
+    staleTime: 60000
   });
   
   const { data: regionsData, isLoading: isLoadingRegions } = useQuery({
     queryKey: ['regions'],
     queryFn: async () => {
-      const response = await regions.getAll();
-      return response.data;
-    }
+      try {
+        const response = await regions.getAll();
+        return response.data;
+      } catch (error) {
+        console.error('Erreur lors de la récupération des régions:', error);
+        return mockRegionsData;
+      }
+    },
+    placeholderData: mockRegionsData,
+    staleTime: 60000
   });
   
   // Mutations
   const createReleveMutation = useMutation({
     mutationFn: (data: Omit<Releve, 'idReleve' | 'region' | 'maladie'>) => releves.create(data),
     onSuccess: () => {
-      toast({
-        title: "Relevé ajouté",
-        description: "Le relevé a été ajouté avec succès."
-      });
+      toast.success("Relevé ajouté avec succès.");
       queryClient.invalidateQueries({ queryKey: ['releves'] });
       setIsAddDialogOpen(false);
       resetReleveForm();
     },
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Impossible d'ajouter le relevé."
-      });
+      toast.error("Impossible d'ajouter le relevé.");
       console.error("Erreur lors de l'ajout du relevé:", error);
     }
   });
@@ -132,18 +205,11 @@ export default function Releves() {
   const deleteReleveMutation = useMutation({
     mutationFn: (id: number) => releves.delete(id),
     onSuccess: () => {
-      toast({
-        title: "Relevé supprimé",
-        description: "Le relevé a été supprimé avec succès."
-      });
+      toast.success("Relevé supprimé avec succès.");
       queryClient.invalidateQueries({ queryKey: ['releves'] });
     },
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Impossible de supprimer le relevé."
-      });
+      toast.error("Impossible de supprimer le relevé.");
       console.error("Erreur lors de la suppression du relevé:", error);
     }
   });
@@ -172,7 +238,9 @@ export default function Releves() {
     return maladie ? maladie.nomMaladie : `Maladie #${maladieId}`;
   };
   
-  const filteredReleves = relevesData?.filter((releve: Releve) => {
+  const dataToUse = Array.isArray(relevesData) ? relevesData : mockRelevesData;
+  
+  const filteredReleves = dataToUse.filter((releve: Releve) => {
     // Filtre par terme de recherche sur la région ou maladie
     const regionName = getRegionName(releve.idRegion).toLowerCase();
     const maladieName = getMaladieName(releve.idMaladie).toLowerCase();
@@ -186,7 +254,7 @@ export default function Releves() {
     const maladieMatch = !selectedMaladie || releve.idMaladie === selectedMaladie;
     
     return searchMatch && regionMatch && maladieMatch;
-  }) || [];
+  });
   
   const paginatedReleves = filteredReleves.slice(
     (currentPage - 1) * itemsPerPage,
@@ -199,11 +267,7 @@ export default function Releves() {
   const handleAddReleve = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newReleve.idRegion || !newReleve.idMaladie) {
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "La région et la maladie sont requises."
-      });
+      toast.error("La région et la maladie sont requises.");
       return;
     }
     
@@ -471,16 +535,78 @@ export default function Releves() {
           </Select>
         </div>
         
+        {!apiMode && (
+          <Alert variant="default" className="bg-amber-50 border-amber-200">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-600">Mode hors ligne</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              Impossible de se connecter à l'API. Les données affichées sont des exemples. Vérifiez que l'API est en cours d'exécution.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Card>
-          {relevesError ? (
+          {isRelevesError && apiMode ? (
             <CardContent className="pt-6">
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Erreur</AlertTitle>
-                <AlertDescription>
-                  Impossible de charger les relevés. Veuillez réessayer plus tard.
+                <AlertTitle>Erreur de connexion</AlertTitle>
+                <AlertDescription className="flex flex-col gap-2">
+                  <p>Impossible de charger les relevés. Vérifiez que:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Le serveur FastAPI est démarré à l'adresse http://127.0.0.1:8000</li>
+                    <li>Les routes API sont configurées correctement</li>
+                    <li>CORS est activé sur le serveur</li>
+                  </ul>
                 </AlertDescription>
               </Alert>
+              
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <ServerCrash className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium">Erreur de connexion à l'API</h3>
+                <p className="text-muted-foreground mt-2 max-w-md">
+                  L'application affiche des données d'exemple en attendant que la connexion à l'API soit rétablie.
+                </p>
+              </div>
+              
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[80px]">ID</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Région</TableHead>
+                    <TableHead>Maladie</TableHead>
+                    <TableHead>Nouveaux cas</TableHead>
+                    <TableHead>Décès</TableHead>
+                    <TableHead>Guérisons</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mockRelevesData.map((releve: Releve) => (
+                    <TableRow key={releve.idReleve}>
+                      <TableCell>{releve.idReleve}</TableCell>
+                      <TableCell>
+                        {new Date(releve.dateReleve).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>{getRegionName(releve.idRegion)}</TableCell>
+                      <TableCell>{getMaladieName(releve.idMaladie)}</TableCell>
+                      <TableCell>{releve.nbNouveauCas?.toLocaleString() || 0}</TableCell>
+                      <TableCell>{releve.nbDeces?.toLocaleString() || 0}</TableCell>
+                      <TableCell>{releve.nbGueri?.toLocaleString() || 0}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={true}
+                        >
+                          Supprimer
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           ) : (
             <>
@@ -537,7 +663,7 @@ export default function Releves() {
                               variant="destructive"
                               size="sm"
                               onClick={() => handleDeleteReleve(releve.idReleve)}
-                              disabled={deleteReleveMutation.isPending}
+                              disabled={deleteReleveMutation.isPending || !apiMode}
                             >
                               {deleteReleveMutation.isPending && deleteReleveMutation.variables === releve.idReleve ? (
                                 <Loader className="h-4 w-4 animate-spin" />

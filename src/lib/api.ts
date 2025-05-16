@@ -1,7 +1,7 @@
 
 // API client pour communiquer avec le backend Python
 import axios from 'axios';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 // Création d'une instance axios avec l'URL de base
 const api = axios.create({
@@ -53,11 +53,7 @@ api.interceptors.response.use(
     }
     
     const message = error.response?.data?.detail || 'Une erreur est survenue';
-    toast({
-      variant: "destructive",
-      title: "Erreur API",
-      description: message,
-    });
+    toast.error("Erreur API: " + message);
     return Promise.reject(error);
   }
 );
