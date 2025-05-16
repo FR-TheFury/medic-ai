@@ -28,15 +28,22 @@ const queryClient = new QueryClient({
       staleTime: 30000, // 30 secondes avant de considérer les données comme obsolètes
       refetchOnWindowFocus: false, // Désactive le rechargement automatique lors du focus
       refetchOnMount: true, // Recharge les données au montage du composant
-      // Gestion globale des erreurs de requêtes
-      onError: (error: any) => {
-        console.error("Erreur de requête:", error);
-      }
     },
     mutations: {
       // Gestion des erreurs pour les mutations
       onError: (error) => {
         console.error("Erreur de mutation:", error);
+      }
+    }
+  }
+});
+
+// Add global query error handler
+queryClient.setDefaultOptions({
+  queries: {
+    meta: {
+      onError: (error: any) => {
+        console.error("Erreur de requête:", error);
       }
     }
   }
