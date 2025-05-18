@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 const MOBILE_BREAKPOINT = 768
@@ -16,4 +17,22 @@ export function useIsMobile() {
   }, [])
 
   return !!isMobile
+}
+
+export function useMobileWithSidebar() {
+  const isMobile = useIsMobile();
+  const [sidebarExpanded, setSidebarExpanded] = React.useState(!isMobile);
+
+  React.useEffect(() => {
+    // Automatically collapse sidebar on mobile
+    if (isMobile) {
+      setSidebarExpanded(false);
+    }
+  }, [isMobile]);
+
+  const toggleSidebar = () => {
+    setSidebarExpanded(prev => !prev);
+  };
+
+  return { isMobile, sidebarExpanded, toggleSidebar };
 }

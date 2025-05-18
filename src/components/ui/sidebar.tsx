@@ -12,14 +12,15 @@ import {
   FileText
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useMobile } from "@/hooks/use-mobile";
+import { useMobileWithSidebar } from "@/hooks/use-mobile";
+import { useState } from "react";
 
 interface SidebarProps {
   className?: string;
 }
 
 export function Sidebar({ className }: SidebarProps) {
-  const { isMobile, sidebarExpanded, toggleSidebar } = useMobile();
+  const { isMobile, sidebarExpanded, toggleSidebar } = useMobileWithSidebar();
   const location = useLocation();
   
   const isActiveRoute = (path: string) => {
