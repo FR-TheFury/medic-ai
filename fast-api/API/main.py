@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Query, Body, APIRouter
+from fastapi import FastAPI, Depends, HTTPException, Query, Body, APIRouter, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from functools import lru_cache
 from pathlib import Path
 import os
+import io
 
 # Importer Base depuis le module database
 from .database import Base, engine, SessionLocal
@@ -406,7 +407,8 @@ def read_releves_by_region_and_date_range(
 
 #----------------Routes pour prédiction----------------
 BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
-MODEL_DIR = BASE_DIR / "models" / "classique" / "tauxMortalite"
+MORTALITY_MODEL_DIR = BASE_DIR / "models" / "classique" / "tauxMortalite"
+HOSPITALIZATION_MODEL_DIR = BASE_DIR / "models" / "classique" / "nbHospitalisation"
 
 @lru_cache()
 def load_mortality_model(pays: str):
@@ -416,10 +418,10 @@ def load_mortality_model(pays: str):
     pattern = f"model_tauxMortalite_{pays}_*_opt.pkl"
     
     # Afficher tous les fichiers disponibles
-    all_files = list(MODEL_DIR.glob("*.pkl"))
+    all_files = list(MORTALITY_MODEL_DIR.glob("*.pkl"))
     
     # Recherche des fichiers pour ce pays
-    files_found = list(MODEL_DIR.glob(pattern))
+    files_found = list(MORTALITY_MODEL_DIR.glob(pattern))
     print(f"Fichiers trouvés pour '{pays}': {files_found}")
     
     if files_found:
@@ -437,6 +439,46 @@ def load_mortality_model(pays: str):
             detail=f"Aucun modèle de taux de mortalité trouvé pour le pays '{pays}'."
         )
 
+@lru_cache()
+def load_hospitalization_model(pays: str):
+    pays = pays.lower() 
+    
+    # Format exact du fichier selon votre convention de nommage
+    pattern = f"model_hosp_{pays}_*_opt.pkl"
+    
+    # Afficher tous les fichiers disponibles
+    all_files = list(HOSPITALIZATION_MODEL_DIR.glob("*.pkl"))
+    
+    # Recherche des fichiers pour ce pays
+    files_found = list(HOSPITALIZATION_MODEL_DIR.glob(pattern))
+    print(f"Fichiers trouvés pour '{pays}': {files_found}")
+    
+    if files_found:
+        model_path = files_found[0]
+        print(f"Chargement du modèle: {model_path}")
+        try:
+            with open(model_path, "rb") as f:
+                return pickle.load(f)
+        except Exception as e:
+            print(f"Erreur lors du chargement du modèle: {e}")
+            raise HTTPException(status_code=500, detail=f"Impossible de charger le modèle: {str(e)}")
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Aucun modèle d'hospitalisation trouvé pour le pays '{pays}'."
+        )
+
+
+class HospitalizationPredictionInput(BaseModel):
+    nbNouveauCas: int
+    nbDeces: int
+    nbGueri: int
+    populationTotale: int
+    pays: str  # nom du fichier modèle (ex: "france", sans extension)
+
+class HospitalizationPredictionOutput(BaseModel):
+    pays: str
+    nombre_hospitalisations: int = Field(..., description="Nombre prédit d'hospitalisations")
 
 @API.post("/prediction/mortalite/", response_model=MortalityPredictionOutput, tags=["Prediction"])
 def predict_mortality(data: MortalityPredictionInput):
@@ -449,7 +491,81 @@ def predict_mortality(data: MortalityPredictionInput):
         "pays": data.pays,
         "taux_mortalite": percentage
     }
+
+@API.post("/prediction/hospitalisation/", response_model=HospitalizationPredictionOutput, tags=["Prediction"])
+def predict_hospitalization(data: HospitalizationPredictionInput):
+    model = load_hospitalization_model(data.pays)
+    input_df = pd.DataFrame([data.model_dump(exclude={"pays"})])
     
+    try:
+        prediction = model.predict(input_df)[0]
+        # Arrondir la prédiction à un nombre entier d'hospitalisations
+        prediction_int = max(0, round(float(prediction)))
+        
+        return {
+            "pays": data.pays,
+            "nombre_hospitalisations": prediction_int
+        }
+    except Exception as e:
+        print(f"Erreur de prédiction: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la prédiction: {str(e)}")
+
+@API.post("/prediction/hospitalisation/csv/", response_model=HospitalizationPredictionOutput, tags=["Prediction"])
+async def predict_hospitalization_from_csv(
+    file: UploadFile = File(...),
+    pays: str = Query(..., description="Pays pour la prédiction")
+):
+    # Vérifier l'extension du fichier
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(
+            status_code=400, 
+            detail="Le fichier doit être au format CSV."
+        )
+    
+    try:
+        # Lire le contenu du fichier
+        contents = await file.read()
+        df = pd.read_csv(io.StringIO(contents.decode('utf-8')))
+        
+        # Vérifier les colonnes requises
+        required_columns = {'nbNouveauCas', 'nbDeces', 'nbGueri', 'populationTotale'}
+        missing_columns = required_columns - set(df.columns)
+        
+        if missing_columns:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Colonnes manquantes dans le CSV: {', '.join(missing_columns)}"
+            )
+        
+        # Charger le modèle
+        model = load_hospitalization_model(pays)
+        
+        # Prendre la première ligne pour la prédiction
+        first_row = df.iloc[0]
+        input_data = {
+            'nbNouveauCas': first_row['nbNouveauCas'],
+            'nbDeces': first_row['nbDeces'],
+            'nbGueri': first_row['nbGueri'],
+            'populationTotale': first_row['populationTotale']
+        }
+        
+        input_df = pd.DataFrame([input_data])
+        prediction = model.predict(input_df)[0]
+        prediction_int = max(0, round(float(prediction)))
+        
+        return {
+            "pays": pays,
+            "nombre_hospitalisations": prediction_int
+        }
+    
+    except pd.errors.EmptyDataError:
+        raise HTTPException(status_code=400, detail="Le fichier CSV est vide.")
+    except pd.errors.ParserError:
+        raise HTTPException(status_code=400, detail="Erreur lors de l'analyse du fichier CSV.")
+    except Exception as e:
+        print(f"Erreur lors du traitement du CSV: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors du traitement du fichier: {str(e)}")
+
 # ------------------ Appliquer routes ------------------
 # Pour les maladies
 generate_routes(

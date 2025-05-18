@@ -1,4 +1,3 @@
-
 // API client pour communiquer avec le backend Python
 import axios from 'axios';
 import { toast } from '@/components/ui/sonner';
@@ -207,6 +206,20 @@ export const predictions = {
     nbHospiSoinsIntensif: number;
     pays: string;
   }) => api.post('/prediction/mortalite/', data),
+
+  predictHospitalization: (data: {
+    nbNouveauCas: number;
+    nbDeces: number;
+    nbGueri: number;
+    populationTotale: number;
+    pays: string;
+  }) => api.post('/prediction/hospitalisation/', data),
+  
+  uploadCSV: (formData: FormData) => api.post('/prediction/hospitalisation/csv/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
 };
 
 export default api;
