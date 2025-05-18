@@ -14,12 +14,12 @@ import Prediction from "@/pages/Prediction";
 import MSPR from "@/pages/MSPR";
 import Documentation from "@/pages/Documentation";
 
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthContextProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 
 function App() {
   return (
-    <AuthProvider>
+    <AuthContextProvider>
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -36,7 +36,7 @@ function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster />
-    </AuthProvider>
+    </AuthContextProvider>
   );
 }
 
