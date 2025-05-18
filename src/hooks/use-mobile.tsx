@@ -1,19 +1,38 @@
-import * as React from "react"
 
-const MOBILE_BREAKPOINT = 768
+import { useState, useEffect } from "react";
+
+const MOBILE_BREAKPOINT = 768;
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(true);
 
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    
     const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
+      const isMobileScreen = window.innerWidth < MOBILE_BREAKPOINT;
+      setIsMobile(isMobileScreen);
+      // Auto collapse sidebar on mobile
+      if (isMobileScreen) {
+        setSidebarExpanded(false);
+      }
+    };
+    
+    mql.addEventListener("change", onChange);
+    // Initial check
+    onChange();
+    
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
-  return !!isMobile
+  const toggleSidebar = () => {
+    setSidebarExpanded(prev => !prev);
+  };
+
+  return {
+    isMobile,
+    sidebarExpanded,
+    toggleSidebar
+  };
 }
