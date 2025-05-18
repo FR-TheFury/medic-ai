@@ -1,3 +1,4 @@
+
 fastapi
 uvicorn
 pymysql
@@ -18,3 +19,4 @@ datasets
 accelerate
 tensorflow
 keras
+xgboost             # Added XGBoost for hospitalization predictions
