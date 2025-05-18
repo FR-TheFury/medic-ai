@@ -1,6 +1,7 @@
 
 import MainLayout from '@/components/layouts/MainLayout';
 import PredictionResultCard from '@/components/prediction/PredictionResultCard';
+import PredictionChart from '@/components/prediction/PredictionChart';
 import HospitalizationForm from '@/components/prediction/HospitalizationForm';
 import CSVUploadForm from '@/components/prediction/CSVUploadForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -100,15 +101,27 @@ export default function Prediction() {
                   </TabsContent>
                 </div>
                 
-                <div>
+                <div className="flex flex-col gap-6">
                   {(predictionResult || isLoading || error) ? (
-                    <PredictionResultCard 
-                      pays={predictionResult?.pays || ''}
-                      valeurPrediction={predictionResult?.nombre_hospitalisations || 0}
-                      typePrediction="hospitalisation"
-                      isLoading={isLoading}
-                      error={error || undefined}
-                    />
+                    <>
+                      <PredictionResultCard 
+                        pays={predictionResult?.pays || ''}
+                        valeurPrediction={predictionResult?.nombre_hospitalisations || 0}
+                        typePrediction="hospitalisation"
+                        isLoading={isLoading}
+                        error={error || undefined}
+                      />
+                      
+                      {predictionResult && !isLoading && !error && (
+                        <PredictionChart 
+                          title="Évolution des hospitalisations"
+                          description={`Tendance des hospitalisations pour ${predictionResult.pays}`}
+                          data={[{ name: "Prédiction", value: predictionResult.nombre_hospitalisations || 0 }]}
+                          isLoading={isLoading}
+                          error={error || undefined}
+                        />
+                      )}
+                    </>
                   ) : (
                     <Card>
                       <CardHeader>
