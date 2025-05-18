@@ -1,5 +1,6 @@
 
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
 
@@ -9,4 +10,8 @@ console.log('Application de suivi épidémiologique en démarrage');
 console.log('Tentative de connexion à l\'API FastAPI à http://127.0.0.1:8000');
 console.log('==============================================');
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
+);
