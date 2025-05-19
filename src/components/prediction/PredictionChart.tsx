@@ -5,7 +5,7 @@ import {
   ChartTooltip,
   ChartTooltipContent
 } from "@/components/ui/chart";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface DataPoint {
@@ -67,7 +67,7 @@ export default function PredictionChart({
   const generateHistoricalData = (predictionValue: number) => {
     // Créer 5 points de données pour les 5 mois précédents
     const historicalData = [];
-    const months = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin"];
+    const months = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sept"];
     const currentMonth = new Date().getMonth();
     
     // Valeurs aléatoires autour de la valeur de prédiction
@@ -85,8 +85,9 @@ export default function PredictionChart({
     }
     
     // Ajouter la valeur prédite pour le mois courant
+    const currentMonthName = months[currentMonth];
     historicalData.push({
-      name: months[currentMonth],
+      name: currentMonthName,
       actual: null,
       predicted: predictionValue
     });
@@ -104,41 +105,45 @@ export default function PredictionChart({
       </CardHeader>
       <CardContent>
         <div className="h-[250px]">
-          <ChartContainer config={config}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    indicator="line"
-                    nameKey="name"
-                    labelKey="name"
-                  />
-                }
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="actual"
-                stroke="#9b87f5"
-                name="Données réelles"
-                strokeWidth={2}
-                dot={{ r: 4 }}
-                connectNulls
-              />
-              <Line
-                type="monotone"
-                dataKey="predicted"
-                stroke="#F97316"
-                name="Prédiction"
-                strokeWidth={2}
-                dot={{ r: 4 }}
-                connectNulls
-              />
-            </LineChart>
-          </ChartContainer>
+          <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer config={config}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      indicator="line"
+                      nameKey="name"
+                      labelKey="name"
+                    />
+                  }
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="actual"
+                  stroke="#9b87f5"
+                  name="Données réelles"
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                  connectNulls
+                />
+                <Line
+                  type="monotone"
+                  dataKey="predicted"
+                  stroke="#F97316"
+                  name="Prédiction"
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                  connectNulls
+                />
+              </LineChart>
+            </ChartContainer>
+          </ResponsiveContainer>
         </div>
       </CardContent>
     </Card>

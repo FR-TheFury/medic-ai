@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,7 @@ interface CSVUploadFormProps {
   onPredictionEnd: () => void;
 }
 
+// Liste des pays mise à jour selon les modèles disponibles dans le dossier nbHospitalisation
 const paysDisponibles = [
   { id: 'france', name: 'France' },
   { id: 'italie', name: 'Italie' },
