@@ -96,14 +96,14 @@ const mockRelevesData: Releve[] = [
   },
 ];
 
-// Données mock pour les maladies
+// Données mock pour les maladies - VALIDÉES
 const mockMaladiesData: Maladie[] = [
   { idMaladie: 1, nomMaladie: "COVID-19" },
   { idMaladie: 2, nomMaladie: "Grippe" },
   { idMaladie: 3, nomMaladie: "Pneumonie" },
 ];
 
-// Données mock pour les régions
+// Données mock pour les régions - VALIDÉES
 const mockRegionsData: Region[] = [
   { idRegion: 1, nomEtat: "Île-de-France", idPays: 1 },
   { idRegion: 2, nomEtat: "Occitanie", idPays: 1 },
@@ -118,6 +118,33 @@ const mockAvailableDates: string[] = [
   "2023-02-01",
   "2023-03-10"
 ];
+
+// Fonction pour valider et nettoyer les données - NOUVELLE FONCTION CRITIQUE
+const validateSelectData = (data: any[]): any[] => {
+  if (!Array.isArray(data)) return [];
+  
+  return data.filter(item => {
+    // Vérification stricte pour les régions
+    if (item && typeof item === 'object' && 'idRegion' in item) {
+      return item.idRegion && 
+             item.idRegion > 0 && 
+             item.nomEtat && 
+             typeof item.nomEtat === 'string' && 
+             item.nomEtat.trim().length > 0;
+    }
+    
+    // Vérification stricte pour les maladies
+    if (item && typeof item === 'object' && 'idMaladie' in item) {
+      return item.idMaladie && 
+             item.idMaladie > 0 && 
+             item.nomMaladie && 
+             typeof item.nomMaladie === 'string' && 
+             item.nomMaladie.trim().length > 0;
+    }
+    
+    return false;
+  });
+};
 
 // Fonction pour formater la date pour l'API
 const formatDateToApi = (date: Date): string => {
@@ -150,14 +177,14 @@ export default function Releves() {
   });
   
   // État pour indiquer si les données doivent être chargées
-  const [shouldLoadData, setShouldLoadData] = useState(false);
+  const [shouldLoadData, setShouldLoadData] = useState(TEST_MODE); // Auto-load en mode test
   
   // Paramètres de pagination
   const itemsPerPage = 10;
   const queryClient = useQueryClient();
   
-  // Récupération des données des régions et maladies - AVEC FALLBACK
-  const { data: maladiesData, isLoading: isLoadingMaladies } = useQuery({
+  // Récupération des données des régions et maladies - AVEC VALIDATION STRICTE
+  const { data: rawMaladiesData, isLoading: isLoadingMaladies } = useQuery({
     queryKey: ['maladies'],
     queryFn: async () => {
       if (TEST_MODE) {
@@ -175,7 +202,7 @@ export default function Releves() {
     staleTime: 60000
   });
   
-  const { data: regionsData, isLoading: isLoadingRegions } = useQuery({
+  const { data: rawRegionsData, isLoading: isLoadingRegions } = useQuery({
     queryKey: ['regions'],
     queryFn: async () => {
       if (TEST_MODE) {
@@ -192,6 +219,10 @@ export default function Releves() {
     placeholderData: mockRegionsData,
     staleTime: 60000
   });
+
+  // VALIDATION STRICTE DES DONNÉES - CORRECTION CRITIQUE
+  const maladiesData = validateSelectData(rawMaladiesData || []);
+  const regionsData = validateSelectData(rawRegionsData || []);
   
   // Récupération des dates disponibles - DÉSACTIVÉE EN MODE TEST
   const { 
@@ -272,26 +303,18 @@ export default function Releves() {
         return mockRelevesData;
       }
     },
-    enabled: TEST_MODE || (shouldLoadData && !!selectedDate),
+    enabled: shouldLoadData && (TEST_MODE || !!selectedDate),
     retry: 1,
     refetchOnWindowFocus: false,
     staleTime: 60000
   });
   
-  // Mutations - CORRECTION DES TYPES
+  // Mutations - SIMPLIFIÉES
   const createReleveMutation = useMutation({
     mutationFn: async (data: Omit<Releve, 'idReleve' | 'region' | 'maladie'>) => {
       if (TEST_MODE) {
-        // Simulation d'une réponse API valide
         await new Promise(resolve => setTimeout(resolve, 500));
-        return {
-          data: { id: Date.now() },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {},
-          request: {}
-        };
+        return { data: { id: Date.now() } };
       }
       return releves.create(data);
     },
@@ -313,16 +336,8 @@ export default function Releves() {
   const deleteReleveMutation = useMutation({
     mutationFn: async (id: number) => {
       if (TEST_MODE) {
-        // Simulation d'une réponse API valide
         await new Promise(resolve => setTimeout(resolve, 500));
-        return {
-          data: null,
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {},
-          request: {}
-        };
+        return { data: null };
       }
       return releves.delete(id);
     },
@@ -332,8 +347,6 @@ export default function Releves() {
         queryClient.invalidateQueries({ queryKey: ['releves'] });
         queryClient.invalidateQueries({ queryKey: ['availableDates'] });
       }
-      setShouldLoadData(false);
-      setSelectedDate(undefined);
     },
     onError: (error) => {
       toast.error("Impossible de supprimer le relevé.");
@@ -509,8 +522,8 @@ export default function Releves() {
                     </label>
                     <div className="col-span-3">
                       <Select 
-                        value={newReleve.idRegion ? String(newReleve.idRegion) : ''}
-                        onValueChange={(value) => setNewReleve({ ...newReleve, idRegion: parseInt(value) })}
+                        value={newReleve.idRegion > 0 ? String(newReleve.idRegion) : ''}
+                        onValueChange={(value) => setNewReleve({ ...newReleve, idRegion: parseInt(value) || 0 })}
                       >
                         <SelectTrigger aria-label="Sélectionner une région">
                           <SelectValue placeholder="Sélectionner une région" />
@@ -521,12 +534,14 @@ export default function Releves() {
                               <Loader className="h-4 w-4 animate-spin mr-2" aria-hidden="true" /> 
                               <span>Chargement...</span>
                             </div>
-                          ) : (
-                            regionsData?.filter(region => region && region.idRegion && region.nomEtat).map((region: Region) => (
-                              <SelectItem key={region.idRegion} value={String(region.idRegion)}>
+                          ) : regionsData.length > 0 ? (
+                            regionsData.map((region: Region) => (
+                              <SelectItem key={`region-${region.idRegion}`} value={String(region.idRegion)}>
                                 {region.nomEtat}
                               </SelectItem>
                             ))
+                          ) : (
+                            <div className="p-2 text-muted-foreground">Aucune région disponible</div>
                           )}
                         </SelectContent>
                       </Select>
@@ -539,8 +554,8 @@ export default function Releves() {
                     </label>
                     <div className="col-span-3">
                       <Select 
-                        value={newReleve.idMaladie ? String(newReleve.idMaladie) : ''}
-                        onValueChange={(value) => setNewReleve({ ...newReleve, idMaladie: parseInt(value) })}
+                        value={newReleve.idMaladie > 0 ? String(newReleve.idMaladie) : ''}
+                        onValueChange={(value) => setNewReleve({ ...newReleve, idMaladie: parseInt(value) || 0 })}
                       >
                         <SelectTrigger aria-label="Sélectionner une maladie">
                           <SelectValue placeholder="Sélectionner une maladie" />
@@ -551,12 +566,14 @@ export default function Releves() {
                               <Loader className="h-4 w-4 animate-spin mr-2" aria-hidden="true" /> 
                               <span>Chargement...</span>
                             </div>
-                          ) : (
-                            maladiesData?.filter(maladie => maladie && maladie.idMaladie && maladie.nomMaladie).map((maladie: Maladie) => (
-                              <SelectItem key={maladie.idMaladie} value={String(maladie.idMaladie)}>
+                          ) : maladiesData.length > 0 ? (
+                            maladiesData.map((maladie: Maladie) => (
+                              <SelectItem key={`maladie-${maladie.idMaladie}`} value={String(maladie.idMaladie)}>
                                 {maladie.nomMaladie}
                               </SelectItem>
                             ))
+                          ) : (
+                            <div className="p-2 text-muted-foreground">Aucune maladie disponible</div>
                           )}
                         </SelectContent>
                       </Select>
@@ -723,7 +740,7 @@ export default function Releves() {
                           selected={selectedDate}
                           onSelect={(date) => {
                             setSelectedDate(date);
-                            setShouldLoadData(false);
+                            if (!TEST_MODE) setShouldLoadData(false);
                           }}
                           disabled={TEST_MODE ? undefined : disabledDays}
                           defaultMonth={availableDatesObjects.length > 0 ? availableDatesObjects[0] : undefined}
@@ -760,7 +777,7 @@ export default function Releves() {
                     value={selectedRegion?.toString() || 'all'}
                     onValueChange={(value) => {
                       setSelectedRegion(value === 'all' ? null : parseInt(value));
-                      setShouldLoadData(false);
+                      if (!TEST_MODE) setShouldLoadData(false);
                     }}
                   >
                     <SelectTrigger aria-label="Filtrer par région">
@@ -768,8 +785,8 @@ export default function Releves() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Toutes les régions</SelectItem>
-                      {regionsData?.filter(region => region && region.idRegion && region.nomEtat).map((region: Region) => (
-                        <SelectItem key={region.idRegion} value={region.idRegion.toString()}>
+                      {regionsData.map((region: Region) => (
+                        <SelectItem key={`filter-region-${region.idRegion}`} value={region.idRegion.toString()}>
                           {region.nomEtat}
                         </SelectItem>
                       ))}
@@ -779,24 +796,26 @@ export default function Releves() {
               </div>
               
               <div className="flex flex-col justify-end space-y-4">
-                <Button 
-                  className="w-full" 
-                  onClick={handleLoadData}
-                  disabled={(!selectedDate && !TEST_MODE) || isLoadingReleves}
-                  aria-label="Charger les données des relevés pour la date sélectionnée"
-                >
-                  {isLoadingReleves ? (
-                    <>
-                      <Loader className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                      Chargement...
-                    </>
-                  ) : (
-                    <>
-                      <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                      {TEST_MODE ? "Afficher les données test" : "Charger les données"}
-                    </>
-                  )}
-                </Button>
+                {!TEST_MODE && (
+                  <Button 
+                    className="w-full" 
+                    onClick={handleLoadData}
+                    disabled={!selectedDate || isLoadingReleves}
+                    aria-label="Charger les données des relevés pour la date sélectionnée"
+                  >
+                    {isLoadingReleves ? (
+                      <>
+                        <Loader className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                        Chargement...
+                      </>
+                    ) : (
+                      <>
+                        <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Charger les données
+                      </>
+                    )}
+                  </Button>
+                )}
                 
                 {((selectedDate && shouldLoadData) || TEST_MODE) && (
                   <Alert variant="default" className="bg-blue-50 border-blue-200" role="status">
@@ -819,7 +838,7 @@ export default function Releves() {
         {/* Affichage des données */}
         <Card>
           <CardHeader className="pb-0">
-            {(shouldLoadData || TEST_MODE) && (
+            {shouldLoadData && (
               <>
                 <CardTitle>
                   {TEST_MODE ? "Données de test" : `Relevés du ${selectedDate ? format(selectedDate, 'dd MMMM yyyy', { locale: fr }) : ''}`}
@@ -834,7 +853,7 @@ export default function Releves() {
           </CardHeader>
           <CardContent className="pt-6">
             {/* Options de filtrage pour les résultats */}
-            {(shouldLoadData || TEST_MODE) && !isLoadingReleves && paginatedReleves.length > 0 && (
+            {shouldLoadData && !isLoadingReleves && paginatedReleves.length > 0 && (
               <div className="flex flex-col md:flex-row gap-4 mb-6">
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
@@ -861,8 +880,8 @@ export default function Releves() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Toutes les maladies</SelectItem>
-                    {maladiesData?.filter(maladie => maladie && maladie.idMaladie && maladie.nomMaladie).map((maladie: Maladie) => (
-                      <SelectItem key={maladie.idMaladie} value={maladie.idMaladie.toString()}>
+                    {maladiesData.map((maladie: Maladie) => (
+                      <SelectItem key={`filter-maladie-${maladie.idMaladie}`} value={maladie.idMaladie.toString()}>
                         {maladie.nomMaladie}
                       </SelectItem>
                     ))}
@@ -871,12 +890,12 @@ export default function Releves() {
               </div>
             )}
             
-            {!(shouldLoadData || TEST_MODE) ? (
+            {!shouldLoadData ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <CalendarIcon className="h-12 w-12 text-primary mb-4" aria-hidden="true" />
                 <h3 className="text-lg font-medium">Aucune donnée chargée</h3>
                 <p className="text-muted-foreground mt-2 max-w-md">
-                  Veuillez sélectionner une date puis cliquer sur "Charger les données" pour afficher les relevés.
+                  {TEST_MODE ? "Les données de test sont disponibles automatiquement." : "Veuillez sélectionner une date puis cliquer sur 'Charger les données' pour afficher les relevés."}
                 </p>
               </div>
             ) : isLoadingReleves ? (

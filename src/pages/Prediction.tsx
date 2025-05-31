@@ -1,255 +1,174 @@
 
+import { useState } from 'react';
 import MainLayout from '@/components/layouts/MainLayout';
-import PredictionResultCard from '@/components/prediction/PredictionResultCard';
-import PredictionChart from '@/components/prediction/PredictionChart';
-import HospitalizationForm from '@/components/prediction/HospitalizationForm';
-import CSVUploadForm from '@/components/prediction/CSVUploadForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, Info, Brain, Clock } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useState } from 'react';
-
-interface PredictionResult {
-  pays: string;
-  nombre_hospitalisations?: number;
-  taux_mortalite?: number;
-  nombre_nouveaux_cas?: number;
-}
+import { Badge } from '@/components/ui/badge';
+import { TrendingUp, AlertTriangle, Brain, Activity } from 'lucide-react';
+import NewCasesForm from '@/components/prediction/NewCasesForm';
+import MortalityRateForm from '@/components/prediction/MortalityRateForm';
+import TemporalModelsForm from '@/components/prediction/TemporalModelsForm';
+import PredictionResultCard from '@/components/prediction/PredictionResultCard';
+import PredictionChart from '@/components/prediction/PredictionChart';
 
 export default function Prediction() {
-  const [predictionResult, setPredictionResult] = useState<PredictionResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("hospitalisation");
-  const [inputMethod, setInputMethod] = useState("form");
-  const [modelType, setModelType] = useState("classique");
+  const [predictionResult, setPredictionResult] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('new-cases');
 
-  const handlePredictionResult = (result: PredictionResult) => {
+  const handlePredictionResult = (result: any) => {
     setPredictionResult(result);
-    setError(null);
   };
 
-  const handlePredictionError = (errorMessage: string) => {
-    setError(errorMessage);
+  const clearResults = () => {
     setPredictionResult(null);
-  };
-
-  const handlePredictionStart = () => {
-    setIsLoading(true);
-    setError(null);
-  };
-
-  const handlePredictionEnd = () => {
-    setIsLoading(false);
   };
 
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Prédiction</h1>
-          <p className="text-muted-foreground mt-1">
-            Utilisez notre modèle d'IA pour prédire les tendances pandémiques
-          </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Prédictions</h1>
+            <p className="text-muted-foreground mt-1">
+              Modèles d'intelligence artificielle pour anticiper l'évolution épidémiologique
+            </p>
+          </div>
         </div>
-        
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>Information</AlertTitle>
-          <AlertDescription>
-            Cette page vous permet d'utiliser nos modèles d'IA pour prédire différentes métriques
-            en fonction des données que vous saisissez. Choisissez entre les modèles classiques
-            et temporels selon vos besoins.
-          </AlertDescription>
-        </Alert>
 
-        {/* Sélection du type de modèle */}
-        <Tabs 
-          defaultValue="classique"
-          value={modelType} 
-          onValueChange={setModelType}
-        >
-          <TabsList className="w-full mb-6">
-            <TabsTrigger value="classique" className="flex-1">
-              <Brain className="w-4 h-4 mr-2" />
-              Modèles Classiques
-            </TabsTrigger>
-            <TabsTrigger value="temporel" className="flex-1">
-              <Clock className="w-4 h-4 mr-2" />
-              Modèles Temporels
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="classique">
-            <Tabs 
-              defaultValue="hospitalisation"
-              value={activeTab} 
-              onValueChange={setActiveTab}
-            >
-              <TabsList>
-                <TabsTrigger value="hospitalisation">Hospitalisations</TabsTrigger>
-                <TabsTrigger value="nouveaux_cas">Nouveaux cas</TabsTrigger>
-                <TabsTrigger value="mortalite">Taux de mortalité</TabsTrigger>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="new-cases" className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  <span className="hidden sm:inline">Nouveaux cas</span>
+                </TabsTrigger>
+                <TabsTrigger value="mortality" className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Mortalité</span>
+                </TabsTrigger>
+                <TabsTrigger value="temporal" className="flex items-center gap-2">
+                  <Brain className="h-4 w-4" />
+                  <span className="hidden sm:inline">Temporel</span>
+                </TabsTrigger>
               </TabsList>
-              
-              <TabsContent value="hospitalisation" className="mt-4">
-                <Tabs defaultValue="form" value={inputMethod} onValueChange={setInputMethod}>
-                  <TabsList className="w-full mb-4">
-                    <TabsTrigger value="form" className="flex-1">Saisie manuelle</TabsTrigger>
-                    <TabsTrigger value="csv" className="flex-1">Import CSV</TabsTrigger>
-                  </TabsList>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <TabsContent value="form" className="mt-0">
-                        <HospitalizationForm 
-                          onPredictionResult={handlePredictionResult}
-                          onPredictionError={handlePredictionError}
-                          onPredictionStart={handlePredictionStart}
-                          onPredictionEnd={handlePredictionEnd}
-                        />
-                      </TabsContent>
 
-                      <TabsContent value="csv" className="mt-0">
-                        <CSVUploadForm 
-                          onPredictionResult={handlePredictionResult}
-                          onPredictionError={handlePredictionError}
-                          onPredictionStart={handlePredictionStart}
-                          onPredictionEnd={handlePredictionEnd}
-                        />
-                      </TabsContent>
-                    </div>
-                    
-                    <div className="flex flex-col gap-6">
-                      {(predictionResult || isLoading || error) ? (
-                        <>
-                          <PredictionResultCard 
-                            pays={predictionResult?.pays || ''}
-                            valeurPrediction={predictionResult?.nombre_hospitalisations || 0}
-                            typePrediction="hospitalisation"
-                            isLoading={isLoading}
-                            error={error || undefined}
-                          />
-                          
-                          {predictionResult && !isLoading && !error && (
-                            <PredictionChart 
-                              title="Évolution des hospitalisations"
-                              description={`Tendance des hospitalisations pour ${predictionResult.pays}`}
-                              data={[{ name: "Prédiction", value: predictionResult.nombre_hospitalisations || 0 }]}
-                              isLoading={isLoading}
-                              error={error || undefined}
-                            />
-                          )}
-                        </>
-                      ) : (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle>Prédiction des hospitalisations</CardTitle>
-                            <CardDescription>
-                              Modèle classique pour prédire le nombre d'hospitalisations
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <p>
-                              Ce modèle utilise des algorithmes d'apprentissage automatique traditionnels
-                              pour prédire le nombre d'hospitalisations basé sur les nouvelles infections,
-                              décès, guérisons et la population totale.
-                            </p>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
+              <TabsContent value="new-cases" className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold">Prédiction de nouveaux cas</h2>
+                    <p className="text-sm text-muted-foreground">
+                      12 modèles disponibles pour différents pays
+                    </p>
                   </div>
-                </Tabs>
+                  <Badge variant="secondary">Classique</Badge>
+                </div>
+                <NewCasesForm onPredictionResult={handlePredictionResult} />
               </TabsContent>
 
-              <TabsContent value="nouveaux_cas" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Prédiction des nouveaux cas</CardTitle>
-                    <CardDescription>
-                      Modèle pour prédire l'évolution des nouveaux cas
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Fonctionnalité en développement</AlertTitle>
-                      <AlertDescription>
-                        Le formulaire de prédiction des nouveaux cas sera bientôt disponible.
-                        Les modèles sont prêts et disponibles dans l'API.
-                      </AlertDescription>
-                    </Alert>
-                  </CardContent>
-                </Card>
+              <TabsContent value="mortality" className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold">Prédiction du taux de mortalité</h2>
+                    <p className="text-sm text-muted-foreground">
+                      12 modèles disponibles pour différents pays
+                    </p>
+                  </div>
+                  <Badge variant="secondary">Classique</Badge>
+                </div>
+                <MortalityRateForm onPredictionResult={handlePredictionResult} />
               </TabsContent>
 
-              <TabsContent value="mortalite" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Prédiction du taux de mortalité</CardTitle>
-                    <CardDescription>
-                      Modèle pour prédire l'évolution du taux de mortalité
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Fonctionnalité en développement</AlertTitle>
-                      <AlertDescription>
-                        Le formulaire de prédiction du taux de mortalité sera bientôt disponible.
-                        Les modèles sont prêts et disponibles dans l'API.
-                      </AlertDescription>
-                    </Alert>
-                  </CardContent>
-                </Card>
+              <TabsContent value="temporal" className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold">Modèles temporels</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Réseaux de neurones récurrents (GRU/LSTM)
+                    </p>
+                  </div>
+                  <Badge variant="default">Temporel</Badge>
+                </div>
+                <TemporalModelsForm onPredictionResult={handlePredictionResult} />
               </TabsContent>
             </Tabs>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="temporel">
+          <div className="space-y-6">
+            {/* Informations sur les modèles */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Modèles Temporels
+                  <Activity className="h-5 w-5" />
+                  Modèles disponibles
                 </CardTitle>
-                <CardDescription>
-                  Prédictions basées sur l'analyse de séries temporelles
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p>
-                  Les modèles temporels utilisent des réseaux de neurones récurrents (GRU/LSTM)
-                  pour analyser les tendances temporelles et faire des prédictions sur l'évolution
-                  future des pandémies.
-                </p>
-                
-                <Alert>
-                  <Clock className="h-4 w-4" />
-                  <AlertTitle>Modèles temporels disponibles</AlertTitle>
-                  <AlertDescription>
-                    <ul className="list-disc pl-5 space-y-1 mt-2">
-                      <li>Modèle GRU pour la Suisse (préparé et entraîné)</li>
-                      <li>Analyse de séries temporelles avancée</li>
-                      <li>Prédictions à court et moyen terme</li>
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Interface en développement</AlertTitle>
-                  <AlertDescription>
-                    L'interface pour les modèles temporels sera bientôt disponible.
-                    Ces modèles nécessitent des données séquentielles et un préprocessing spécifique.
-                  </AlertDescription>
-                </Alert>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Nouveaux cas</span>
+                  <Badge variant="outline">12 pays</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Taux de mortalité</span>
+                  <Badge variant="outline">12 pays</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Hospitalisations</span>
+                  <Badge variant="outline">7 pays</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Modèles temporels</span>
+                  <Badge variant="outline">1 GRU</Badge>
+                </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+
+            {/* Résultats de prédiction */}
+            {predictionResult && (
+              <>
+                <PredictionResultCard 
+                  result={predictionResult} 
+                  onClear={clearResults}
+                />
+                
+                {predictionResult.predictions && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Graphique des prédictions</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <PredictionChart 
+                        predictions={predictionResult.predictions}
+                        type={activeTab}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+
+            {/* Aide contextuelle */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Aide</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  <strong>Modèles classiques :</strong> Utilisent des algorithmes de machine learning 
+                  traditionnels (XGBoost, LightGBM, CatBoost, Random Forest).
+                </p>
+                <p>
+                  <strong>Modèles temporels :</strong> Analysent les séquences temporelles 
+                  avec des réseaux de neurones récurrents (GRU/LSTM).
+                </p>
+                <p>
+                  <strong>Confiance :</strong> Indique la fiabilité de la prédiction 
+                  basée sur la validation croisée.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </MainLayout>
   );
