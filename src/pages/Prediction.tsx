@@ -4,10 +4,11 @@ import MainLayout from '@/components/layouts/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, AlertTriangle, Brain, Activity } from 'lucide-react';
+import { TrendingUp, AlertTriangle, Brain, Activity, Building2 } from 'lucide-react';
 import NewCasesForm from '@/components/prediction/NewCasesForm';
 import MortalityRateForm from '@/components/prediction/MortalityRateForm';
 import TemporalModelsForm from '@/components/prediction/TemporalModelsForm';
+import HospitalizationForm from '@/components/prediction/HospitalizationForm';
 import PredictionResultCard from '@/components/prediction/PredictionResultCard';
 import PredictionChart from '@/components/prediction/PredictionChart';
 
@@ -38,7 +39,7 @@ export default function Prediction() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="new-cases" className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4" />
                   <span className="hidden sm:inline">Nouveaux cas</span>
@@ -46,6 +47,10 @@ export default function Prediction() {
                 <TabsTrigger value="mortality" className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
                   <span className="hidden sm:inline">Mortalité</span>
+                </TabsTrigger>
+                <TabsTrigger value="hospitalization" className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Hospitalisation</span>
                 </TabsTrigger>
                 <TabsTrigger value="temporal" className="flex items-center gap-2">
                   <Brain className="h-4 w-4" />
@@ -77,6 +82,24 @@ export default function Prediction() {
                   <Badge variant="secondary">Classique</Badge>
                 </div>
                 <MortalityRateForm onPredictionResult={handlePredictionResult} />
+              </TabsContent>
+
+              <TabsContent value="hospitalization" className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold">Prédiction d'hospitalisation</h2>
+                    <p className="text-sm text-muted-foreground">
+                      7 modèles disponibles pour différents pays
+                    </p>
+                  </div>
+                  <Badge variant="secondary">Classique</Badge>
+                </div>
+                <HospitalizationForm 
+                  onPredictionResult={handlePredictionResult}
+                  onPredictionError={(error) => console.error(error)}
+                  onPredictionStart={() => {}}
+                  onPredictionEnd={() => {}}
+                />
               </TabsContent>
 
               <TabsContent value="temporal" className="space-y-4">
