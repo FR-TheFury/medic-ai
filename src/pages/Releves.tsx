@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layouts/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -86,6 +87,8 @@ export default function Releves() {
         ]);
         setRegionsData(regionsResponse.data.slice(0, 50)); // Limiter à 50 régions
         setMaladiesData(maladiesResponse.data);
+        console.log('Régions chargées:', regionsResponse.data.length);
+        console.log('Maladies chargées:', maladiesResponse.data.length);
       } catch (error) {
         console.error('Erreur lors du chargement des données de sélection:', error);
         toast.error('Erreur lors du chargement des données de sélection');
@@ -118,10 +121,10 @@ export default function Releves() {
       }
 
       console.log('Relevés récupérés:', relevesData.length);
+      console.log('Premier relevé:', relevesData[0]);
 
       // Filtrer par terme de recherche si nécessaire
-      if (searchTerm) {
-        // Pour rechercher, on doit d'abord récupérer les détails des régions et maladies
+      if (searchTerm && regionsData.length > 0 && maladiesData.length > 0) {
         const filteredReleves = relevesData.filter(releve => {
           const regionName = regionsData.find(r => r.idRegion === releve.idRegion)?.nomEtat || '';
           const maladieName = maladiesData.find(m => m.idMaladie === releve.idMaladie)?.nomMaladie || '';
@@ -140,11 +143,18 @@ export default function Releves() {
       const pageData = relevesData.slice(startIndex, endIndex);
 
       // Enrichir les données avec les noms de région et maladie
-      const enrichedData = pageData.map(releve => ({
-        ...releve,
-        region: { nomEtat: regionsData.find(r => r.idRegion === releve.idRegion)?.nomEtat || 'Région inconnue' },
-        maladie: { nomMaladie: maladiesData.find(m => m.idMaladie === releve.idMaladie)?.nomMaladie || 'Maladie inconnue' }
-      }));
+      const enrichedData = pageData.map(releve => {
+        const regionName = regionsData.find(r => r.idRegion === releve.idRegion)?.nomEtat || `Région ID: ${releve.idRegion}`;
+        const maladieName = maladiesData.find(m => m.idMaladie === releve.idMaladie)?.nomMaladie || `Maladie ID: ${releve.idMaladie}`;
+        
+        console.log(`Relevé ${releve.idReleve}: Région ${releve.idRegion} -> ${regionName}, Maladie ${releve.idMaladie} -> ${maladieName}`);
+        
+        return {
+          ...releve,
+          region: { nomEtat: regionName },
+          maladie: { nomMaladie: maladieName }
+        };
+      });
 
       setCurrentReleves(enrichedData);
       setTotalPages(totalPagesCalculated);
@@ -395,6 +405,76 @@ export default function Releves() {
                       min="0"
                     />
                   </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="nbHospiSoinsIntensif" className="text-right">
+                      Soins intensifs
+                    </Label>
+                    <Input
+                      id="nbHospiSoinsIntensif"
+                      type="number"
+                      className="col-span-3"
+                      value={newReleve.nbHospiSoinsIntensif}
+                      onChange={(e) => setNewReleve({ ...newReleve, nbHospiSoinsIntensif: parseInt(e.target.value) || 0 })}
+                      min="0"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="nbVaccineTotalement" className="text-right">
+                      Vaccinés totalement
+                    </Label>
+                    <Input
+                      id="nbVaccineTotalement"
+                      type="number"
+                      className="col-span-3"
+                      value={newReleve.nbVaccineTotalement}
+                      onChange={(e) => setNewReleve({ ...newReleve, nbVaccineTotalement: parseInt(e.target.value) || 0 })}
+                      min="0"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="nbSousRespirateur" className="text-right">
+                      Sous respirateur
+                    </Label>
+                    <Input
+                      id="nbSousRespirateur"
+                      type="number"
+                      className="col-span-3"
+                      value={newReleve.nbSousRespirateur}
+                      onChange={(e) => setNewReleve({ ...newReleve, nbSousRespirateur: parseInt(e.target.value) || 0 })}
+                      min="0"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="nbVaccine" className="text-right">
+                      Vaccinés
+                    </Label>
+                    <Input
+                      id="nbVaccine"
+                      type="number"
+                      className="col-span-3"
+                      value={newReleve.nbVaccine}
+                      onChange={(e) => setNewReleve({ ...newReleve, nbVaccine: parseInt(e.target.value) || 0 })}
+                      min="0"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="nbTeste" className="text-right">
+                      Testés
+                    </Label>
+                    <Input
+                      id="nbTeste"
+                      type="number"
+                      className="col-span-3"
+                      value={newReleve.nbTeste}
+                      onChange={(e) => setNewReleve({ ...newReleve, nbTeste: parseInt(e.target.value) || 0 })}
+                      min="0"
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button type="submit">Ajouter</Button>
@@ -458,13 +538,16 @@ export default function Releves() {
                       <TableHead>Décès</TableHead>
                       <TableHead>Guérisons</TableHead>
                       <TableHead>Hospitalisations</TableHead>
+                      <TableHead>Soins intensifs</TableHead>
+                      <TableHead>Vaccinés</TableHead>
+                      <TableHead>Testés</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {currentReleves.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground">
+                        <TableCell colSpan={11} className="text-center text-muted-foreground">
                           Aucun relevé trouvé
                         </TableCell>
                       </TableRow>
@@ -480,6 +563,9 @@ export default function Releves() {
                           <TableCell>{releve.nbDeces?.toLocaleString('fr-FR') || 0}</TableCell>
                           <TableCell>{releve.nbGueri?.toLocaleString('fr-FR') || 0}</TableCell>
                           <TableCell>{releve.nbHospitalisation?.toLocaleString('fr-FR') || 0}</TableCell>
+                          <TableCell>{releve.nbHospiSoinsIntensif?.toLocaleString('fr-FR') || 0}</TableCell>
+                          <TableCell>{releve.nbVaccine?.toLocaleString('fr-FR') || 0}</TableCell>
+                          <TableCell>{releve.nbTeste?.toLocaleString('fr-FR') || 0}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="destructive"
