@@ -38,89 +38,155 @@
   white-space: inherit;
 }
 
-/* Mode contraste élevé */
+/* Mode contraste élevé - correction */
 .high-contrast {
-  filter: contrast(150%) brightness(110%);
+  filter: contrast(200%) brightness(120%) saturate(150%) !important;
 }
 
 .high-contrast * {
   text-shadow: none !important;
-  box-shadow: none !important;
+  box-shadow: 0 0 0 2px currentColor !important;
 }
 
 .high-contrast button,
 .high-contrast input,
 .high-contrast select,
 .high-contrast textarea {
-  border: 2px solid currentColor !important;
+  border: 3px solid #000000 !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
 }
 
 .high-contrast a {
   text-decoration: underline !important;
+  color: #0000ff !important;
+}
+
+.high-contrast a:visited {
+  color: #800080 !important;
+}
+
+.high-contrast a:hover {
+  color: #ff0000 !important;
 }
 
 .high-contrast :focus {
-  outline: 3px solid #ffff00 !important;
+  outline: 4px solid #ffff00 !important;
   outline-offset: 2px !important;
+  background-color: #000000 !important;
+  color: #ffffff !important;
 }
 
-/* Tailles de police */
+.high-contrast .bg-primary {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+.high-contrast .text-muted-foreground {
+  color: #000000 !important;
+}
+
+/* Tailles de police - correction de la hiérarchie */
 .font-small {
-  font-size: 14px;
+  font-size: 12px !important;
+}
+
+.font-small .text-xs {
+  font-size: 10px !important;
 }
 
 .font-small .text-sm {
-  font-size: 12px;
+  font-size: 11px !important;
+}
+
+.font-small .text-base {
+  font-size: 12px !important;
 }
 
 .font-small .text-lg {
-  font-size: 16px;
+  font-size: 14px !important;
 }
 
 .font-small .text-xl {
-  font-size: 18px;
+  font-size: 16px !important;
 }
 
 .font-small .text-2xl {
-  font-size: 20px;
+  font-size: 18px !important;
 }
 
 .font-small .text-3xl {
-  font-size: 24px;
+  font-size: 20px !important;
 }
 
 .font-medium {
-  font-size: 16px;
+  font-size: 16px !important;
+}
+
+.font-medium .text-xs {
+  font-size: 12px !important;
+}
+
+.font-medium .text-sm {
+  font-size: 14px !important;
+}
+
+.font-medium .text-base {
+  font-size: 16px !important;
+}
+
+.font-medium .text-lg {
+  font-size: 18px !important;
+}
+
+.font-medium .text-xl {
+  font-size: 20px !important;
+}
+
+.font-medium .text-2xl {
+  font-size: 24px !important;
+}
+
+.font-medium .text-3xl {
+  font-size: 28px !important;
 }
 
 .font-large {
-  font-size: 18px;
+  font-size: 20px !important;
+}
+
+.font-large .text-xs {
+  font-size: 16px !important;
 }
 
 .font-large .text-sm {
-  font-size: 16px;
+  font-size: 18px !important;
+}
+
+.font-large .text-base {
+  font-size: 20px !important;
 }
 
 .font-large .text-lg {
-  font-size: 20px;
+  font-size: 24px !important;
 }
 
 .font-large .text-xl {
-  font-size: 22px;
+  font-size: 28px !important;
 }
 
 .font-large .text-2xl {
-  font-size: 26px;
+  font-size: 32px !important;
 }
 
 .font-large .text-3xl {
-  font-size: 30px;
+  font-size: 36px !important;
 }
 
 /* Focus amélioré */
 *:focus {
-  outline: 2px solid hsl(var(--primary));
-  outline-offset: 2px;
+  outline: 3px solid hsl(var(--primary)) !important;
+  outline-offset: 2px !important;
 }
 
 /* Suppression du focus par défaut pour les éléments qui ont un focus personnalisé */
@@ -130,8 +196,8 @@ input:focus,
 select:focus,
 textarea:focus,
 [tabindex]:focus {
-  outline: 2px solid hsl(var(--primary));
-  outline-offset: 2px;
+  outline: 3px solid hsl(var(--primary)) !important;
+  outline-offset: 2px !important;
 }
 
 /* Skip links */
@@ -146,6 +212,7 @@ textarea:focus,
   border-radius: 4px;
   z-index: 1000;
   transition: top 0.3s;
+  font-weight: bold;
 }
 
 .skip-link:focus {
@@ -165,39 +232,41 @@ button:focus,
 
 /* Indicateurs visuels pour les états des éléments */
 [aria-pressed="true"] {
-  background-color: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
 }
 
 [aria-expanded="true"] {
-  background-color: hsl(var(--muted));
+  background-color: hsl(var(--muted)) !important;
 }
 
 /* Amélioration de la lisibilité des tableaux */
 table th {
-  background-color: hsl(var(--muted));
-  font-weight: 600;
+  background-color: hsl(var(--muted)) !important;
+  font-weight: 600 !important;
 }
 
 table tr:nth-child(even) {
-  background-color: hsl(var(--muted) / 0.3);
+  background-color: hsl(var(--muted) / 0.3) !important;
 }
 
 /* Amélioration des formulaires */
 label {
   cursor: pointer;
+  font-weight: 500;
 }
 
 input:invalid,
 select:invalid,
 textarea:invalid {
-  border-color: hsl(var(--destructive));
+  border-color: hsl(var(--destructive)) !important;
+  border-width: 2px !important;
 }
 
 input:valid,
 select:valid,
 textarea:valid {
-  border-color: hsl(var(--border));
+  border-color: hsl(var(--border)) !important;
 }
 
 /* Animation réduite pour les personnes sensibles au mouvement */
@@ -212,16 +281,72 @@ textarea:valid {
   }
 }
 
+/* Support de lecture vocale */
+.speak-text {
+  cursor: pointer;
+  position: relative;
+}
+
+.speak-text:hover::after {
+  content: "🔊";
+  position: absolute;
+  right: -20px;
+  top: 0;
+}
+
 /* Amélioration pour les grandes tailles d'écran */
 @media (min-width: 1200px) {
   .font-large {
-    font-size: 20px;
+    font-size: 22px !important;
   }
 }
 
 /* Amélioration pour les petites tailles d'écran */
 @media (max-width: 768px) {
   .font-small {
-    font-size: 16px; /* Pas trop petit sur mobile */
+    font-size: 14px !important; /* Pas trop petit sur mobile */
   }
+  
+  .font-medium {
+    font-size: 16px !important;
+  }
+  
+  .font-large {
+    font-size: 18px !important;
+  }
+}
+
+/* Amélioration des liens */
+a:focus {
+  outline: 3px solid hsl(var(--primary)) !important;
+  outline-offset: 2px !important;
+  text-decoration: underline !important;
+}
+
+/* Amélioration des boutons */
+button:focus {
+  outline: 3px solid hsl(var(--primary)) !important;
+  outline-offset: 2px !important;
+}
+
+/* Mode sombre amélioré pour le contraste élevé */
+.dark.high-contrast {
+  filter: contrast(200%) brightness(80%) saturate(150%) !important;
+}
+
+.dark.high-contrast button,
+.dark.high-contrast input,
+.dark.high-contrast select,
+.dark.high-contrast textarea {
+  border: 3px solid #ffffff !important;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+.dark.high-contrast a {
+  color: #87ceeb !important;
+}
+
+.dark.high-contrast a:visited {
+  color: #dda0dd !important;
 }

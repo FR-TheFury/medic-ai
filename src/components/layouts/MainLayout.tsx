@@ -65,7 +65,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     <AccessibilityProvider>
       <div className="min-h-screen bg-background">
         {/* Header */}
-        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40">
+        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40" role="banner">
           <div className="container mx-auto px-4">
             <div className="flex h-16 items-center justify-between">
               {/* Logo */}
@@ -87,8 +87,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 </Button>
                 <Link 
                   to="/home" 
-                  className="flex items-center gap-2 text-xl font-bold text-primary hover:text-primary/80 transition-colors"
-                  aria-label="Retour à l'accueil"
+                  className="flex items-center gap-2 text-xl font-bold text-primary hover:text-primary/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm"
+                  aria-label="PandemicTracker - Retour à l'accueil"
                 >
                   <Activity className="h-6 w-6" aria-hidden="true" />
                   <span>PandemicTracker</span>
@@ -105,12 +105,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
                       key={item.name}
                       to={item.href}
                       className={cn(
-                        "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                        "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                         isCurrent
                           ? "bg-primary/10 text-primary"
                           : "text-muted-foreground hover:text-foreground hover:bg-muted"
                       )}
                       aria-current={isCurrent ? "page" : undefined}
+                      title={`Aller à ${item.name}`}
                     >
                       <Icon className="h-4 w-4" aria-hidden="true" />
                       {item.name}
@@ -129,11 +130,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
                       variant="ghost"
                       size="sm"
                       asChild
-                      className="hidden sm:flex"
+                      className="hidden sm:flex focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                     >
                       <Link 
                         to={item.href}
                         aria-label={item.name}
+                        title={item.name}
                       >
                         <Icon className="h-4 w-4" aria-hidden="true" />
                       </Link>
@@ -144,9 +146,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="hidden sm:flex"
+                  className="hidden sm:flex focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                   onClick={handleLogout}
                   aria-label="Se déconnecter"
+                  title="Se déconnecter"
                 >
                   <LogOut className="h-4 w-4" aria-hidden="true" />
                 </Button>
@@ -170,13 +173,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
                         key={item.name}
                         to={item.href}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                          "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                           isCurrent
                             ? "bg-primary/10 text-primary"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted"
                         )}
                         onClick={() => setMobileMenuOpen(false)}
                         aria-current={isCurrent ? "page" : undefined}
+                        title={`Aller à ${item.name}`}
                       >
                         <Icon className="h-4 w-4" aria-hidden="true" />
                         {item.name}
@@ -191,8 +195,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
                         <Link
                           key={item.name}
                           to={item.href}
-                          className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                          className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                           onClick={() => setMobileMenuOpen(false)}
+                          title={item.name}
                         >
                           <Icon className="h-4 w-4" aria-hidden="true" />
                           {item.name}
@@ -201,8 +206,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     })}
                     
                     <button 
-                      className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors w-full text-left"
+                      className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors w-full text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                       onClick={handleLogout}
+                      title="Se déconnecter"
                     >
                       <LogOut className="h-4 w-4" aria-hidden="true" />
                       Se déconnecter
@@ -215,7 +221,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         </header>
 
         {/* Main content */}
-        <main className="container mx-auto px-4 py-6">
+        <main id="main-content" className="container mx-auto px-4 py-6" role="main" tabIndex={-1}>
           {children}
         </main>
 
