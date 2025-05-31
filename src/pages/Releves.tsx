@@ -278,11 +278,18 @@ export default function Releves() {
     staleTime: 60000
   });
   
-  // Mutations
+  // Mutations - CORRECTION DES TYPES
   const createReleveMutation = useMutation({
-    mutationFn: (data: Omit<Releve, 'idReleve' | 'region' | 'maladie'>) => {
+    mutationFn: async (data: Omit<Releve, 'idReleve' | 'region' | 'maladie'>) => {
       if (TEST_MODE) {
-        return Promise.resolve({ data: { id: Date.now() } });
+        // Retourner un objet compatible avec AxiosResponse
+        return {
+          data: { id: Date.now() },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {}
+        };
       }
       return releves.create(data);
     },
@@ -302,9 +309,16 @@ export default function Releves() {
   });
 
   const deleteReleveMutation = useMutation({
-    mutationFn: (id: number) => {
+    mutationFn: async (id: number) => {
       if (TEST_MODE) {
-        return Promise.resolve();
+        // Retourner un objet compatible avec AxiosResponse
+        return {
+          data: null,
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {}
+        };
       }
       return releves.delete(id);
     },
