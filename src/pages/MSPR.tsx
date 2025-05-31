@@ -1,15 +1,13 @@
-
 import MainLayout from '@/components/layouts/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 export default function MSPR() {
   const teamMembers = [
-    { name: "John Doe", role: "Chef de projet" },
-    { name: "Jane Smith", role: "Développeur backend" },
-    { name: "Mike Johnson", role: "Développeur frontend" },
-    { name: "Anna Brown", role: "Data Scientist" },
-    { name: "Robert Davis", role: "Expert en cybersécurité" },
+    { name: "Téo Debay", role: "Développeur de l'application complète" },
+    { name: "Jérome Rose", role: "Développeur des modèles IA" },
+    { name: "Hodari Bigwi", role: "Tests et documentation" },
+    { name: "Martin Beaucheron", role: "Documentation accessibilité" },
   ];
 
   return (
@@ -84,7 +82,7 @@ export default function MSPR() {
                       <p className="font-medium">{member.name}</p>
                       <p className="text-sm text-muted-foreground">{member.role}</p>
                     </div>
-                    <Badge variant="outline">{index === 0 ? "Lead" : "Member"}</Badge>
+                    <Badge variant="outline">{index === 0 ? "Lead Dev" : "Member"}</Badge>
                   </div>
                 ))}
               </div>

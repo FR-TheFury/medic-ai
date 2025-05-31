@@ -753,9 +753,9 @@ export default function Releves() {
                 <div className="mt-4 space-y-2">
                   <label className="text-sm font-medium">Filtrer par région (optionnel)</label>
                   <Select
-                    value={selectedRegion?.toString() || ''}
+                    value={selectedRegion?.toString() || 'all'}
                     onValueChange={(value) => {
-                      setSelectedRegion(value ? parseInt(value) : null);
+                      setSelectedRegion(value === 'all' ? null : parseInt(value));
                       setShouldLoadData(false);
                     }}
                   >
@@ -763,7 +763,7 @@ export default function Releves() {
                       <SelectValue placeholder="Toutes les régions" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Toutes les régions</SelectItem>
+                      <SelectItem value="all">Toutes les régions</SelectItem>
                       {regionsData?.map((region: Region) => (
                         <SelectItem key={region.idRegion} value={region.idRegion.toString()}>
                           {region.nomEtat}
@@ -798,7 +798,7 @@ export default function Releves() {
                   <Alert variant="default" className="bg-blue-50 border-blue-200" role="status">
                     <CalendarIcon className="h-4 w-4 text-blue-600" aria-hidden="true" />
                     <AlertTitle className="text-blue-600">
-                      {TEST_MODE ? "Mode test activé" : `Date sélectionnée: ${selectedDate ? format(selectedDate, 'dd MMMM yyyy', { locale: fr }) : ''}`}
+                      {TEST_MODE ? "Mode test activé" : `Date sélectionnée: ${selectedDate ? format(selectedDate, 'dd/MM/yyyy', { locale: fr }) : ''}`}
                     </AlertTitle>
                     {selectedRegion && (
                       <AlertDescription className="text-blue-700">
