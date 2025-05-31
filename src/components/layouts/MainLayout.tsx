@@ -1,5 +1,5 @@
 
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -21,6 +21,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { AccessibilityProvider } from "@/components/accessibility/AccessibilityProvider";
 import { AccessibilityToolbar } from "@/components/accessibility/AccessibilityToolbar";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -44,6 +45,8 @@ const userNavigation = [
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isCurrentPage = (href: string) => {
@@ -51,6 +54,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
       return location.pathname === "/";
     }
     return location.pathname.startsWith(href);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   return (
@@ -137,6 +145,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   variant="ghost"
                   size="sm"
                   className="hidden sm:flex"
+                  onClick={handleLogout}
                   aria-label="Se déconnecter"
                 >
                   <LogOut className="h-4 w-4" aria-hidden="true" />
@@ -191,7 +200,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
                       );
                     })}
                     
-                    <button className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors w-full text-left">
+                    <button 
+                      className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors w-full text-left"
+                      onClick={handleLogout}
+                    >
                       <LogOut className="h-4 w-4" aria-hidden="true" />
                       Se déconnecter
                     </button>

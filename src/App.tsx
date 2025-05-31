@@ -1,6 +1,7 @@
 
 import { Route, Routes } from "react-router-dom";
 import Index from "@/pages/Index";
+import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
 import Maladies from "@/pages/Maladies";
 import Login from "@/pages/Login";
@@ -22,6 +23,7 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/maladies" element={<Maladies />} />
         <Route path="/pays" element={<Pays />} />
