@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layouts/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,8 +8,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { FileBarChart, Plus, Search, Trash2 } from 'lucide-react';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { Plus, Search, Trash2, CalendarIcon } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
+import { DateRange } from 'react-day-picker';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 // Interface pour les relevés
 interface Releve {
@@ -23,7 +28,7 @@ interface Releve {
   hospitalisations: number;
 }
 
-// Données statiques d'exemple
+// Données statiques d'exemple (simulant une base de données plus large)
 const mockReleves: Releve[] = [
   {
     id: 1,
@@ -54,16 +59,113 @@ const mockReleves: Releve[] = [
     deces: 12,
     guerisons: 450,
     hospitalisations: 89
+  },
+  {
+    id: 4,
+    date: '2024-01-18',
+    region: 'Provence-Alpes-Côte d\'Azur',
+    maladie: 'COVID-19',
+    nouveauCas: 423,
+    deces: 18,
+    guerisons: 390,
+    hospitalisations: 67
+  },
+  {
+    id: 5,
+    date: '2024-01-19',
+    region: 'Nouvelle-Aquitaine',
+    maladie: 'Grippe',
+    nouveauCas: 334,
+    deces: 8,
+    guerisons: 298,
+    hospitalisations: 45
+  },
+  {
+    id: 6,
+    date: '2024-01-20',
+    region: 'Hauts-de-France',
+    maladie: 'COVID-19',
+    nouveauCas: 678,
+    deces: 22,
+    guerisons: 589,
+    hospitalisations: 112
+  },
+  {
+    id: 7,
+    date: '2024-01-21',
+    region: 'Grand Est',
+    maladie: 'Pneumonie',
+    nouveauCas: 245,
+    deces: 15,
+    guerisons: 198,
+    hospitalisations: 32
+  },
+  {
+    id: 8,
+    date: '2024-01-22',
+    region: 'Pays de la Loire',
+    maladie: 'COVID-19',
+    nouveauCas: 512,
+    deces: 19,
+    guerisons: 445,
+    hospitalisations: 78
+  },
+  {
+    id: 9,
+    date: '2024-01-23',
+    region: 'Bretagne',
+    maladie: 'Grippe',
+    nouveauCas: 389,
+    deces: 11,
+    guerisons: 334,
+    hospitalisations: 54
+  },
+  {
+    id: 10,
+    date: '2024-01-24',
+    region: 'Normandie',
+    maladie: 'COVID-19',
+    nouveauCas: 456,
+    deces: 16,
+    guerisons: 398,
+    hospitalisations: 69
+  },
+  {
+    id: 11,
+    date: '2024-01-25',
+    region: 'Centre-Val de Loire',
+    maladie: 'Pneumonie',
+    nouveauCas: 198,
+    deces: 7,
+    guerisons: 167,
+    hospitalisations: 28
+  },
+  {
+    id: 12,
+    date: '2024-01-26',
+    region: 'Bourgogne-Franche-Comté',
+    maladie: 'COVID-19',
+    nouveauCas: 367,
+    deces: 13,
+    guerisons: 312,
+    hospitalisations: 51
   }
 ];
 
 const regions = ['Île-de-France', 'Occitanie', 'Auvergne-Rhône-Alpes', 'Provence-Alpes-Côte d\'Azur'];
 const maladies = ['COVID-19', 'Grippe', 'Pneumonie'];
 
+const ITEMS_PER_PAGE = 5;
+
 export default function Releves() {
-  const [releves, setReleves] = useState<Releve[]>(mockReleves);
+  const [allReleves, setAllReleves] = useState<Releve[]>(mockReleves);
+  const [currentReleves, setCurrentReleves] = useState<Releve[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [newReleve, setNewReleve] = useState({
     date: '',
     region: '',
@@ -74,11 +176,62 @@ export default function Releves() {
     hospitalisations: 0
   });
 
-  // Filtrer les relevés selon le terme de recherche
-  const filteredReleves = releves.filter(releve =>
-    releve.region.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    releve.maladie.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Fonction pour filtrer les relevés selon les critères
+  const getFilteredReleves = () => {
+    let filtered = allReleves;
+
+    // Filtre par terme de recherche
+    if (searchTerm) {
+      filtered = filtered.filter(releve =>
+        releve.region.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        releve.maladie.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filtre par plage de dates
+    if (dateRange?.from && dateRange?.to) {
+      filtered = filtered.filter(releve => {
+        const releveDate = new Date(releve.date);
+        return releveDate >= dateRange.from! && releveDate <= dateRange.to!;
+      });
+    }
+
+    return filtered;
+  };
+
+  // Fonction pour charger les relevés de la page courante
+  const loadPageData = (page: number) => {
+    setIsLoading(true);
+    
+    // Simuler un délai de chargement (comme une vraie API)
+    setTimeout(() => {
+      const filteredReleves = getFilteredReleves();
+      const startIndex = (page - 1) * ITEMS_PER_PAGE;
+      const endIndex = startIndex + ITEMS_PER_PAGE;
+      const pageData = filteredReleves.slice(startIndex, endIndex);
+      
+      setCurrentReleves(pageData);
+      setTotalPages(Math.ceil(filteredReleves.length / ITEMS_PER_PAGE));
+      setIsLoading(false);
+    }, 300);
+  };
+
+  // Charger les données initiales
+  useEffect(() => {
+    loadPageData(1);
+  }, []);
+
+  // Recharger quand les filtres changent
+  useEffect(() => {
+    setCurrentPage(1);
+    loadPageData(1);
+  }, [searchTerm, dateRange]);
+
+  // Changer de page
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    loadPageData(page);
+  };
 
   // Ajouter un nouveau relevé
   const handleAddReleve = (e: React.FormEvent) => {
@@ -100,7 +253,7 @@ export default function Releves() {
       hospitalisations: newReleve.hospitalisations
     };
 
-    setReleves([...releves, nouveauReleve]);
+    setAllReleves([nouveauReleve, ...allReleves]);
     setIsAddDialogOpen(false);
     setNewReleve({
       date: '',
@@ -112,13 +265,20 @@ export default function Releves() {
       hospitalisations: 0
     });
     toast.success("Relevé ajouté avec succès");
+    
+    // Recharger la première page
+    setCurrentPage(1);
+    loadPageData(1);
   };
 
   // Supprimer un relevé
   const handleDeleteReleve = (id: number) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce relevé ?")) {
-      setReleves(releves.filter(releve => releve.id !== id));
+      setAllReleves(allReleves.filter(releve => releve.id !== id));
       toast.success("Relevé supprimé avec succès");
+      
+      // Recharger la page courante
+      loadPageData(currentPage);
     }
   };
 
@@ -129,7 +289,7 @@ export default function Releves() {
           <div>
             <h1 className="text-3xl font-bold">Relevés</h1>
             <p className="text-muted-foreground mt-1">
-              Gestion des relevés épidémiologiques
+              Gestion des relevés épidémiologiques (5 par page)
             </p>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -276,66 +436,132 @@ export default function Releves() {
           <CardHeader>
             <CardTitle>Liste des relevés</CardTitle>
             <CardDescription>
-              Gestion et consultation des relevés épidémiologiques
+              Consultation paginée des relevés épidémiologiques (5 par page)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center space-x-2 mb-4">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher par région ou maladie..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+              <div className="flex items-center space-x-2 flex-1">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher par région ou maladie..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                <DateRangePicker
+                  dateRange={dateRange}
+                  onDateRangeChange={setDateRange}
+                  className="w-[300px]"
+                />
+                {dateRange && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDateRange(undefined)}
+                  >
+                    Effacer
+                  </Button>
+                )}
+              </div>
             </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Région</TableHead>
-                  <TableHead>Maladie</TableHead>
-                  <TableHead>Nouveaux cas</TableHead>
-                  <TableHead>Décès</TableHead>
-                  <TableHead>Guérisons</TableHead>
-                  <TableHead>Hospitalisations</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredReleves.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground">
-                      Aucun relevé trouvé
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredReleves.map((releve) => (
-                    <TableRow key={releve.id}>
-                      <TableCell>
-                        {new Date(releve.date).toLocaleDateString('fr-FR')}
-                      </TableCell>
-                      <TableCell>{releve.region}</TableCell>
-                      <TableCell>{releve.maladie}</TableCell>
-                      <TableCell>{releve.nouveauCas.toLocaleString('fr-FR')}</TableCell>
-                      <TableCell>{releve.deces.toLocaleString('fr-FR')}</TableCell>
-                      <TableCell>{releve.guerisons.toLocaleString('fr-FR')}</TableCell>
-                      <TableCell>{releve.hospitalisations.toLocaleString('fr-FR')}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteReleve(releve.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+            {isLoading ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Chargement des relevés...</p>
+              </div>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Région</TableHead>
+                      <TableHead>Maladie</TableHead>
+                      <TableHead>Nouveaux cas</TableHead>
+                      <TableHead>Décès</TableHead>
+                      <TableHead>Guérisons</TableHead>
+                      <TableHead>Hospitalisations</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))
+                  </TableHeader>
+                  <TableBody>
+                    {currentReleves.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground">
+                          Aucun relevé trouvé
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      currentReleves.map((releve) => (
+                        <TableRow key={releve.id}>
+                          <TableCell>
+                            {new Date(releve.date).toLocaleDateString('fr-FR')}
+                          </TableCell>
+                          <TableCell>{releve.region}</TableCell>
+                          <TableCell>{releve.maladie}</TableCell>
+                          <TableCell>{releve.nouveauCas.toLocaleString('fr-FR')}</TableCell>
+                          <TableCell>{releve.deces.toLocaleString('fr-FR')}</TableCell>
+                          <TableCell>{releve.guerisons.toLocaleString('fr-FR')}</TableCell>
+                          <TableCell>{releve.hospitalisations.toLocaleString('fr-FR')}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteReleve(releve.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+
+                {totalPages > 1 && (
+                  <div className="flex justify-center mt-6">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                            className={currentPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                        
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => handlePageChange(page)}
+                              isActive={page === currentPage}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                            className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
                 )}
-              </TableBody>
-            </Table>
+
+                <div className="text-sm text-muted-foreground mt-4 text-center">
+                  Page {currentPage} sur {totalPages} - Affichage de {currentReleves.length} relevé(s) sur {getFilteredReleves().length} au total
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
