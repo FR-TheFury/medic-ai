@@ -1,4 +1,3 @@
-
 import MainLayout from '@/components/layouts/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +19,7 @@ export default function Documentation() {
             <TabsTrigger value="frontend" className="flex-1">Frontend</TabsTrigger>
             <TabsTrigger value="backend" className="flex-1">Backend</TabsTrigger>
             <TabsTrigger value="models" className="flex-1">Modèles IA</TabsTrigger>
+            <TabsTrigger value="accessibility" className="flex-1">Accessibilité</TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview" className="mt-6 space-y-6">
@@ -339,6 +339,276 @@ Où:
                     </tr>
                   </tbody>
                 </table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="accessibility" className="mt-6 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Fonctionnalités d'accessibilité</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p>
+                  L'application PandemicTracker est conçue pour être accessible à tous les utilisateurs, 
+                  y compris ceux ayant des besoins spécifiques. Nous avons implémenté un ensemble complet 
+                  de fonctionnalités d'accessibilité conformes aux directives WCAG 2.1.
+                </p>
+                
+                <h3 className="text-lg font-medium mt-4">Barre d'outils d'accessibilité</h3>
+                <p>
+                  Une barre d'outils dédiée est disponible en permanence via le bouton en bas à droite 
+                  de l'écran. Elle peut être ouverte avec <kbd>Alt + A</kbd> et offre les fonctionnalités suivantes :
+                </p>
+                
+                <h4 className="text-md font-medium mt-3">Mode contraste élevé</h4>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Activation/désactivation via <kbd>Alt + H</kbd></li>
+                  <li>Améliore la visibilité des textes et des éléments interactifs</li>
+                  <li>Augmente le contraste des couleurs (200%), la luminosité (120%) et la saturation (150%)</li>
+                  <li>Adaptation spéciale pour le mode sombre</li>
+                  <li>Bordures renforcées pour tous les éléments interactifs</li>
+                </ul>
+                
+                <h4 className="text-md font-medium mt-3">Ajustement de la taille de police</h4>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Trois tailles disponibles : Petite (A), Moyenne (A), Grande (A)</li>
+                  <li>Raccourcis clavier : <kbd>Alt + 1</kbd> (petite), <kbd>Alt + 2</kbd> (moyenne), <kbd>Alt + 3</kbd> (grande)</li>
+                  <li>Hiérarchie correcte maintenue entre tous les éléments typographiques</li>
+                  <li>Adaptation responsive pour mobile et desktop</li>
+                </ul>
+                
+                <h4 className="text-md font-medium mt-3">Lecture audio native</h4>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Utilise l'API Web Speech Synthesis du navigateur</li>
+                  <li>Lecture en français (fr-FR) avec paramètres optimisés</li>
+                  <li>Bouton de test intégré dans la barre d'outils</li>
+                  <li>Arrêt de la lecture avec <kbd>Alt + S</kbd> ou <kbd>Échap</kbd></li>
+                  <li>Indicateur visuel pendant la lecture</li>
+                  <li>Compatible avec les lecteurs d'écran externes</li>
+                </ul>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Navigation et raccourcis clavier</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <h3 className="text-lg font-medium">Navigation au clavier</h3>
+                <p>
+                  L'application est entièrement navigable au clavier pour les utilisateurs qui ne peuvent 
+                  pas utiliser une souris ou préfèrent la navigation clavier.
+                </p>
+                
+                <h4 className="text-md font-medium mt-3">Raccourcis principaux</h4>
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="border p-2 text-left">Raccourci</th>
+                      <th className="border p-2 text-left">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border p-2"><kbd>Alt + M</kbd></td>
+                      <td className="border p-2">Aller au menu principal</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2"><kbd>Alt + C</kbd></td>
+                      <td className="border p-2">Aller au contenu principal</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2"><kbd>Alt + A</kbd></td>
+                      <td className="border p-2">Ouvrir les options d'accessibilité</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2"><kbd>Alt + H</kbd></td>
+                      <td className="border p-2">Basculer le contraste élevé</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2"><kbd>Alt + 1/2/3</kbd></td>
+                      <td className="border p-2">Changer la taille de police</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2"><kbd>Alt + S</kbd></td>
+                      <td className="border p-2">Arrêter la lecture audio</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2"><kbd>Tab</kbd></td>
+                      <td className="border p-2">Naviguer vers l'élément suivant</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2"><kbd>Shift + Tab</kbd></td>
+                      <td className="border p-2">Naviguer vers l'élément précédent</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2"><kbd>Entrée / Espace</kbd></td>
+                      <td className="border p-2">Activer l'élément focalisé</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2"><kbd>Échap</kbd></td>
+                      <td className="border p-2">Fermer les dialogues / Arrêter la lecture</td>
+                    </tr>
+                  </tbody>
+                </table>
+                
+                <h3 className="text-lg font-medium mt-4">Liens d'évitement (Skip Links)</h3>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Lien "Aller au contenu principal" en haut de chaque page</li>
+                  <li>Visible uniquement lors de la navigation au clavier</li>
+                  <li>Permet de contourner la navigation pour accéder directement au contenu</li>
+                </ul>
+                
+                <h3 className="text-lg font-medium mt-4">Indicateurs de focus</h3>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Contour visible de 3px autour des éléments focalisés</li>
+                  <li>Couleur primaire pour une bonne visibilité</li>
+                  <li>Décalage de 2px pour éviter la superposition</li>
+                  <li>Focus renforcé en mode contraste élevé (4px jaune)</li>
+                </ul>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Compatibilité avec les lecteurs d'écran</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <h3 className="text-lg font-medium">Support des lecteurs d'écran</h3>
+                <p>
+                  L'application est optimisée pour fonctionner avec les principaux lecteurs d'écran :
+                </p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li><strong>NVDA</strong> (Windows) - Support complet</li>
+                  <li><strong>JAWS</strong> (Windows) - Support complet</li>
+                  <li><strong>VoiceOver</strong> (macOS/iOS) - Support complet</li>
+                  <li><strong>TalkBack</strong> (Android) - Support de base</li>
+                  <li><strong>Lecteur d'écran Windows</strong> - Support de base</li>
+                </ul>
+                
+                <h3 className="text-lg font-medium mt-4">Zones live ARIA</h3>
+                <p>
+                  Deux zones live sont présentes dans l'application pour communiquer avec les lecteurs d'écran :
+                </p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li><strong>Zone d'annonces (aria-live="polite") :</strong> Pour les notifications non urgentes</li>
+                  <li><strong>Zone d'alertes (aria-live="assertive") :</strong> Pour les messages urgents</li>
+                  <li>Messages automatiquement effacés après 1 seconde pour permettre de nouvelles annonces</li>
+                </ul>
+                
+                <h3 className="text-lg font-medium mt-4">Attributs ARIA</h3>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li><strong>aria-label :</strong> Libellés descriptifs pour tous les éléments interactifs</li>
+                  <li><strong>aria-describedby :</strong> Descriptions détaillées des fonctionnalités</li>
+                  <li><strong>aria-expanded :</strong> État des éléments pliables/dépliables</li>
+                  <li><strong>aria-pressed :</strong> État des boutons toggle</li>
+                  <li><strong>aria-current :</strong> Page actuelle dans la navigation</li>
+                  <li><strong>role :</strong> Rôles sémantiques appropriés (navigation, main, dialog, etc.)</li>
+                </ul>
+                
+                <h3 className="text-lg font-medium mt-4">Structure sémantique</h3>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Utilisation correcte des balises HTML5 sémantiques</li>
+                  <li>Hiérarchie des titres respectée (h1, h2, h3...)</li>
+                  <li>Balises <code>&lt;main&gt;</code>, <code>&lt;nav&gt;</code>, <code>&lt;header&gt;</code> appropriées</li>
+                  <li>Formulaires avec labels associés</li>
+                  <li>Tableaux avec en-têtes appropriés</li>
+                </ul>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Fonctionnalités avancées</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <h3 className="text-lg font-medium">Réduction des animations</h3>
+                <p>
+                  Respect de la préférence utilisateur <code>prefers-reduced-motion</code> :
+                </p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Animations réduites à 0.01ms pour les utilisateurs sensibles au mouvement</li>
+                  <li>Transitions désactivées automatiquement</li>
+                  <li>Défilement fluide désactivé</li>
+                </ul>
+                
+                <h3 className="text-lg font-medium mt-4">Validation des formulaires</h3>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Bordures colorées pour les champs valides/invalides</li>
+                  <li>Messages d'erreur associés aux champs</li>
+                  <li>Support complet du clavier pour la navigation</li>
+                  <li>Labels obligatoires avec curseur pointer</li>
+                </ul>
+                
+                <h3 className="text-lg font-medium mt-4">Amélioration des contrastes</h3>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Respect des ratios de contraste WCAG AA (4.5:1)</li>
+                  <li>Mode contraste élevé pour les utilisateurs malvoyants</li>
+                  <li>Adaptation automatique des couleurs en mode sombre</li>
+                  <li>Indicateurs visuels renforcés pour les états (hover, focus, active)</li>
+                </ul>
+                
+                <h3 className="text-lg font-medium mt-4">Classes utilitaires</h3>
+                <p>
+                  Classes CSS spéciales pour l'accessibilité :
+                </p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li><code>.sr-only</code> : Contenu visible uniquement par les lecteurs d'écran</li>
+                  <li><code>.skip-link</code> : Liens d'évitement stylisés</li>
+                  <li><code>.speak-text</code> : Éléments avec indicateur de lecture audio</li>
+                  <li><code>.high-contrast</code> : Styles pour le mode contraste élevé</li>
+                  <li><code>.font-small/medium/large</code> : Gestion des tailles de police</li>
+                </ul>
+                
+                <h3 className="text-lg font-medium mt-4">Tests et compatibilité</h3>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Tests avec NVDA et VoiceOver</li>
+                  <li>Navigation complète au clavier testée</li>
+                  <li>Validation W3C des balises ARIA</li>
+                  <li>Tests de contraste avec des outils automatisés</li>
+                  <li>Support multi-navigateurs (Chrome, Firefox, Safari, Edge)</li>
+                </ul>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Utilisation recommandée</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <h3 className="text-lg font-medium">Pour les utilisateurs malvoyants</h3>
+                <ol className="list-decimal pl-5 space-y-1">
+                  <li>Activer le mode contraste élevé avec <kbd>Alt + H</kbd></li>
+                  <li>Ajuster la taille de police avec <kbd>Alt + 1/2/3</kbd></li>
+                  <li>Utiliser un lecteur d'écran compatible (NVDA recommandé)</li>
+                  <li>Naviguer avec <kbd>Tab</kbd> et <kbd>Shift + Tab</kbd></li>
+                </ol>
+                
+                <h3 className="text-lg font-medium mt-4">Pour les utilisateurs sourds ou malentendants</h3>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Toutes les informations audio ont des équivalents visuels</li>
+                  <li>Les notifications importantes utilisent des toasts visuels</li>
+                  <li>Pas de contenu uniquement audio</li>
+                </ul>
+                
+                <h3 className="text-lg font-medium mt-4">Pour les utilisateurs avec difficultés motrices</h3>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Navigation complète au clavier</li>
+                  <li>Zones de clic suffisamment grandes (44px minimum)</li>
+                  <li>Pas de contraintes de temps</li>
+                  <li>Raccourcis clavier pour les actions fréquentes</li>
+                </ul>
+                
+                <h3 className="text-lg font-medium mt-4">Support technique</h3>
+                <p>
+                  En cas de problème d'accessibilité, les fonctionnalités de debug sont disponibles :
+                </p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Console logs pour suivre les annonces aux lecteurs d'écran</li>
+                  <li>Indicateurs visuels pour les états de focus</li>
+                  <li>Messages de confirmation pour toutes les actions d'accessibilité</li>
+                </ul>
               </CardContent>
             </Card>
           </TabsContent>
