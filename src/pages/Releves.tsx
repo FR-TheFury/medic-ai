@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -20,6 +19,9 @@ import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+
+// Mode test pour désactiver les requêtes API problématiques
+const TEST_MODE = true;
 
 // Interface pour les modèles
 interface Releve {
@@ -124,9 +126,11 @@ const formatDateToApi = (date: Date): string => {
 
 // Composant principal
 export default function Releves() {
-  // Vérification initiale de la disponibilité de l'API
+  // Vérification initiale de la disponibilité de l'API - DÉSACTIVÉE EN MODE TEST
   useEffect(() => {
-    checkApiAvailability(true);
+    if (!TEST_MODE) {
+      checkApiAvailability(true);
+    }
   }, []);
 
   // États
@@ -152,10 +156,13 @@ export default function Releves() {
   const itemsPerPage = 10;
   const queryClient = useQueryClient();
   
-  // Récupération des données des régions et maladies
+  // Récupération des données des régions et maladies - AVEC FALLBACK
   const { data: maladiesData, isLoading: isLoadingMaladies } = useQuery({
     queryKey: ['maladies'],
     queryFn: async () => {
+      if (TEST_MODE) {
+        return mockMaladiesData;
+      }
       try {
         const response = await maladies.getAll();
         return response.data;
@@ -171,6 +178,9 @@ export default function Releves() {
   const { data: regionsData, isLoading: isLoadingRegions } = useQuery({
     queryKey: ['regions'],
     queryFn: async () => {
+      if (TEST_MODE) {
+        return mockRegionsData;
+      }
       try {
         const response = await regions.getAll();
         return response.data;
@@ -183,7 +193,7 @@ export default function Releves() {
     staleTime: 60000
   });
   
-  // Récupération des dates disponibles
+  // Récupération des dates disponibles - DÉSACTIVÉE EN MODE TEST
   const { 
     data: availableDates, 
     isLoading: isLoadingDates,
@@ -192,6 +202,9 @@ export default function Releves() {
   } = useQuery({
     queryKey: ['availableDates'],
     queryFn: async () => {
+      if (TEST_MODE) {
+        return mockAvailableDates;
+      }
       try {
         const response = await releves.getAvailableDates();
         return response.data;
@@ -201,7 +214,8 @@ export default function Releves() {
       }
     },
     placeholderData: mockAvailableDates,
-    staleTime: 300000 // 5 minutes
+    staleTime: 300000,
+    enabled: !TEST_MODE // Désactiver la requête en mode test
   });
   
   // Préparation des dates disponibles pour le calendrier
@@ -219,7 +233,7 @@ export default function Releves() {
     return datesMap.has(formattedDate);
   };
   
-  // Récupération des données des relevés avec filtre de date
+  // Récupération des données des relevés - SIMPLIFIÉE EN MODE TEST
   const { 
     data: relevesData, 
     isLoading: isLoadingReleves, 
@@ -229,6 +243,11 @@ export default function Releves() {
   } = useQuery({
     queryKey: ['releves', selectedDate, selectedRegion, shouldLoadData],
     queryFn: async () => {
+      if (TEST_MODE) {
+        // En mode test, retourner directement les données mock
+        return mockRelevesData;
+      }
+      
       if (!selectedDate) {
         return [];
       }
@@ -250,25 +269,29 @@ export default function Releves() {
         return response?.data || [];
       } catch (error) {
         console.error('Erreur lors de la récupération des relevés:', error);
-        if (!isApiActive()) {
-          return mockRelevesData;
-        }
-        throw error;
+        return mockRelevesData;
       }
     },
-    enabled: shouldLoadData && !!selectedDate,
+    enabled: TEST_MODE || (shouldLoadData && !!selectedDate),
     retry: 1,
     refetchOnWindowFocus: false,
-    staleTime: 60000 // 1 minute pour éviter trop de requêtes
+    staleTime: 60000
   });
   
   // Mutations
   const createReleveMutation = useMutation({
-    mutationFn: (data: Omit<Releve, 'idReleve' | 'region' | 'maladie'>) => releves.create(data),
+    mutationFn: (data: Omit<Releve, 'idReleve' | 'region' | 'maladie'>) => {
+      if (TEST_MODE) {
+        return Promise.resolve({ data: { id: Date.now() } });
+      }
+      return releves.create(data);
+    },
     onSuccess: () => {
       toast.success("Relevé ajouté avec succès.");
-      queryClient.invalidateQueries({ queryKey: ['releves'] });
-      queryClient.invalidateQueries({ queryKey: ['availableDates'] });
+      if (!TEST_MODE) {
+        queryClient.invalidateQueries({ queryKey: ['releves'] });
+        queryClient.invalidateQueries({ queryKey: ['availableDates'] });
+      }
       setIsAddDialogOpen(false);
       resetReleveForm();
     },
@@ -279,11 +302,18 @@ export default function Releves() {
   });
 
   const deleteReleveMutation = useMutation({
-    mutationFn: (id: number) => releves.delete(id),
+    mutationFn: (id: number) => {
+      if (TEST_MODE) {
+        return Promise.resolve();
+      }
+      return releves.delete(id);
+    },
     onSuccess: () => {
       toast.success("Relevé supprimé avec succès.");
-      queryClient.invalidateQueries({ queryKey: ['releves'] });
-      queryClient.invalidateQueries({ queryKey: ['availableDates'] });
+      if (!TEST_MODE) {
+        queryClient.invalidateQueries({ queryKey: ['releves'] });
+        queryClient.invalidateQueries({ queryKey: ['availableDates'] });
+      }
       setShouldLoadData(false);
       setSelectedDate(undefined);
     },
@@ -308,7 +338,7 @@ export default function Releves() {
   
   // Gestionnaire pour charger les données
   const handleLoadData = () => {
-    if (!selectedDate) {
+    if (!selectedDate && !TEST_MODE) {
       toast.error("Veuillez sélectionner une date avant de charger les données");
       return;
     }
@@ -384,31 +414,40 @@ export default function Releves() {
     : [];
   
   // Vérifier si l'API est disponible
-  const apiIsActive = isApiActive();
+  const apiIsActive = TEST_MODE || isApiActive();
 
   // Rendu du composant
   return (
     <MainLayout>
-      <div className="space-y-6">
+      {/* Skip link pour l'accessibilité */}
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md"
+        tabIndex={1}
+      >
+        Aller au contenu principal
+      </a>
+      
+      <div className="space-y-6" id="main-content" role="main" aria-label="Gestion des relevés épidémiologiques">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Relevés</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-3xl font-bold" id="page-title">Relevés</h1>
+            <p className="text-muted-foreground mt-1" aria-describedby="page-title">
               Gestion des relevés épidémiologiques
             </p>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <FileBarChart className="mr-2 h-4 w-4" />
+              <Button aria-label="Ajouter un nouveau relevé épidémiologique">
+                <FileBarChart className="mr-2 h-4 w-4" aria-hidden="true" />
                 Ajouter un relevé
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent aria-labelledby="dialog-title" aria-describedby="dialog-description">
               <form onSubmit={handleAddReleve}>
                 <DialogHeader>
-                  <DialogTitle>Ajouter un relevé</DialogTitle>
-                  <DialogDescription>
+                  <DialogTitle id="dialog-title">Ajouter un relevé</DialogTitle>
+                  <DialogDescription id="dialog-description">
                     Remplissez les informations pour ajouter un nouveau relevé épidémiologique.
                   </DialogDescription>
                 </DialogHeader>
@@ -427,8 +466,9 @@ export default function Releves() {
                               "w-full justify-start text-left font-normal",
                               !selectedDate && "text-muted-foreground"
                             )}
+                            aria-label={selectedDate ? `Date sélectionnée: ${format(selectedDate, 'dd/MM/yyyy')}` : "Sélectionner une date"}
                           >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
                             {selectedDate ? format(selectedDate, 'dd/MM/yyyy') : <span>Sélectionner une date</span>}
                           </Button>
                         </PopoverTrigger>
@@ -454,13 +494,14 @@ export default function Releves() {
                         value={newReleve.idRegion ? String(newReleve.idRegion) : ''}
                         onValueChange={(value) => setNewReleve({ ...newReleve, idRegion: parseInt(value) })}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger aria-label="Sélectionner une région">
                           <SelectValue placeholder="Sélectionner une région" />
                         </SelectTrigger>
                         <SelectContent>
                           {isLoadingRegions ? (
                             <div className="flex items-center justify-center p-2">
-                              <Loader className="h-4 w-4 animate-spin mr-2" /> Chargement...
+                              <Loader className="h-4 w-4 animate-spin mr-2" aria-hidden="true" /> 
+                              <span>Chargement...</span>
                             </div>
                           ) : (
                             regionsData?.map((region: Region) => (
@@ -483,13 +524,14 @@ export default function Releves() {
                         value={newReleve.idMaladie ? String(newReleve.idMaladie) : ''}
                         onValueChange={(value) => setNewReleve({ ...newReleve, idMaladie: parseInt(value) })}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger aria-label="Sélectionner une maladie">
                           <SelectValue placeholder="Sélectionner une maladie" />
                         </SelectTrigger>
                         <SelectContent>
                           {isLoadingMaladies ? (
                             <div className="flex items-center justify-center p-2">
-                              <Loader className="h-4 w-4 animate-spin mr-2" /> Chargement...
+                              <Loader className="h-4 w-4 animate-spin mr-2" aria-hidden="true" /> 
+                              <span>Chargement...</span>
                             </div>
                           ) : (
                             maladiesData?.map((maladie: Maladie) => (
@@ -514,6 +556,7 @@ export default function Releves() {
                       value={newReleve.nbNouveauCas || 0}
                       onChange={(e) => setNewReleve({ ...newReleve, nbNouveauCas: parseInt(e.target.value) || 0 })}
                       min="0"
+                      aria-label="Nombre de nouveaux cas"
                     />
                   </div>
                   
@@ -528,6 +571,7 @@ export default function Releves() {
                       value={newReleve.nbDeces || 0}
                       onChange={(e) => setNewReleve({ ...newReleve, nbDeces: parseInt(e.target.value) || 0 })}
                       min="0"
+                      aria-label="Nombre de décès"
                     />
                   </div>
                   
@@ -542,6 +586,7 @@ export default function Releves() {
                       value={newReleve.nbGueri || 0}
                       onChange={(e) => setNewReleve({ ...newReleve, nbGueri: parseInt(e.target.value) || 0 })}
                       min="0"
+                      aria-label="Nombre de guérisons"
                     />
                   </div>
                   
@@ -556,6 +601,7 @@ export default function Releves() {
                       value={newReleve.nbHospitalisation || 0}
                       onChange={(e) => setNewReleve({ ...newReleve, nbHospitalisation: parseInt(e.target.value) || 0 })}
                       min="0"
+                      aria-label="Nombre d'hospitalisations"
                     />
                   </div>
                   
@@ -570,6 +616,7 @@ export default function Releves() {
                       value={newReleve.nbHospiSoinsIntensif || 0}
                       onChange={(e) => setNewReleve({ ...newReleve, nbHospiSoinsIntensif: parseInt(e.target.value) || 0 })}
                       min="0"
+                      aria-label="Nombre de patients en soins intensifs"
                     />
                   </div>
                 </div>
@@ -577,7 +624,7 @@ export default function Releves() {
                   <Button type="submit" disabled={createReleveMutation.isPending}>
                     {createReleveMutation.isPending ? (
                       <>
-                        <Loader className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                         Ajout en cours...
                       </>
                     ) : (
@@ -590,9 +637,20 @@ export default function Releves() {
           </Dialog>
         </div>
         
-        {!apiIsActive && (
-          <Alert variant="default" className="bg-amber-50 border-amber-200">
-            <AlertCircle className="h-4 w-4 text-amber-600" />
+        {/* Alert pour mode test */}
+        {TEST_MODE && (
+          <Alert variant="default" className="bg-blue-50 border-blue-200" role="alert">
+            <AlertCircle className="h-4 w-4 text-blue-600" aria-hidden="true" />
+            <AlertTitle className="text-blue-600">Mode test activé</AlertTitle>
+            <AlertDescription className="text-blue-700">
+              Les requêtes API sont désactivées temporairement. Les données affichées sont des exemples pour tester l'interface.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {!apiIsActive && !TEST_MODE && (
+          <Alert variant="default" className="bg-amber-50 border-amber-200" role="alert">
+            <AlertCircle className="h-4 w-4 text-amber-600" aria-hidden="true" />
             <AlertTitle className="text-amber-600">Mode hors ligne</AlertTitle>
             <AlertDescription className="text-amber-700">
               Impossible de se connecter à l'API. Les données affichées sont des exemples. Vérifiez que l'API est en cours d'exécution.
@@ -604,7 +662,7 @@ export default function Releves() {
           <CardHeader>
             <CardTitle>Sélection des données</CardTitle>
             <CardDescription>
-              Choisissez une date pour laquelle des relevés existent, puis cliquez sur "Charger les données"
+              {TEST_MODE ? "Mode test - données mock affichées directement" : "Choisissez une date pour laquelle des relevés existent, puis cliquez sur 'Charger les données'"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -620,8 +678,9 @@ export default function Releves() {
                           "w-full justify-start text-left font-normal",
                           !selectedDate && "text-muted-foreground"
                         )}
+                        aria-label={selectedDate ? `Date sélectionnée: ${format(selectedDate, 'dd MMMM yyyy', { locale: fr })}` : "Sélectionner une date"}
                       >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
                         {selectedDate ? (
                           format(selectedDate, 'dd MMMM yyyy', { locale: fr })
                         ) : (
@@ -630,14 +689,14 @@ export default function Releves() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-                      {isLoadingDates ? (
+                      {isLoadingDates && !TEST_MODE ? (
                         <div className="p-4 flex items-center justify-center">
-                          <Loader className="h-5 w-5 animate-spin mr-2" />
+                          <Loader className="h-5 w-5 animate-spin mr-2" aria-hidden="true" />
                           <span>Chargement des dates disponibles...</span>
                         </div>
-                      ) : isDatesError ? (
+                      ) : isDatesError && !TEST_MODE ? (
                         <div className="p-4 text-red-500">
-                          <AlertCircle className="h-5 w-5 inline mr-2" />
+                          <AlertCircle className="h-5 w-5 inline mr-2" aria-hidden="true" />
                           <span>Erreur lors du chargement des dates</span>
                         </div>
                       ) : (
@@ -646,18 +705,18 @@ export default function Releves() {
                           selected={selectedDate}
                           onSelect={(date) => {
                             setSelectedDate(date);
-                            setShouldLoadData(false); // Réinitialiser le chargement des données
+                            setShouldLoadData(false);
                           }}
-                          disabled={disabledDays}
+                          disabled={TEST_MODE ? undefined : disabledDays}
                           defaultMonth={availableDatesObjects.length > 0 ? availableDatesObjects[0] : undefined}
                           initialFocus
                           className="pointer-events-auto"
                         />
                       )}
                       
-                      {!isLoadingDates && availableDates?.length === 0 && (
+                      {!isLoadingDates && !TEST_MODE && availableDates?.length === 0 && (
                         <div className="p-4 text-center text-muted-foreground">
-                          <AlertCircle className="h-5 w-5 inline mr-2" />
+                          <AlertCircle className="h-5 w-5 inline mr-2" aria-hidden="true" />
                           Aucune date avec des relevés n'est disponible
                         </div>
                       )}
@@ -665,7 +724,9 @@ export default function Releves() {
                   </Popover>
                   
                   <div className="text-xs text-muted-foreground">
-                    {isLoadingDates ? (
+                    {TEST_MODE ? (
+                      "Mode test - toutes les dates disponibles"
+                    ) : isLoadingDates ? (
                       "Chargement..."
                     ) : Array.isArray(availableDates) && availableDates.length > 0 ? (
                       <>Dates disponibles: {availableDates.length}</>
@@ -684,7 +745,7 @@ export default function Releves() {
                       setShouldLoadData(false);
                     }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger aria-label="Filtrer par région">
                       <SelectValue placeholder="Toutes les régions" />
                     </SelectTrigger>
                     <SelectContent>
@@ -703,26 +764,27 @@ export default function Releves() {
                 <Button 
                   className="w-full" 
                   onClick={handleLoadData}
-                  disabled={!selectedDate || isLoadingReleves}
+                  disabled={(!selectedDate && !TEST_MODE) || isLoadingReleves}
+                  aria-label="Charger les données des relevés pour la date sélectionnée"
                 >
                   {isLoadingReleves ? (
                     <>
-                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                       Chargement...
                     </>
                   ) : (
                     <>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      Charger les données
+                      <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                      {TEST_MODE ? "Afficher les données test" : "Charger les données"}
                     </>
                   )}
                 </Button>
                 
-                {selectedDate && shouldLoadData && (
-                  <Alert variant="default" className="bg-blue-50 border-blue-200">
-                    <CalendarIcon className="h-4 w-4 text-blue-600" />
+                {((selectedDate && shouldLoadData) || TEST_MODE) && (
+                  <Alert variant="default" className="bg-blue-50 border-blue-200" role="status">
+                    <CalendarIcon className="h-4 w-4 text-blue-600" aria-hidden="true" />
                     <AlertTitle className="text-blue-600">
-                      Date sélectionnée: {format(selectedDate, 'dd MMMM yyyy', { locale: fr })}
+                      {TEST_MODE ? "Mode test activé" : `Date sélectionnée: ${selectedDate ? format(selectedDate, 'dd MMMM yyyy', { locale: fr }) : ''}`}
                     </AlertTitle>
                     {selectedRegion && (
                       <AlertDescription className="text-blue-700">
@@ -739,13 +801,13 @@ export default function Releves() {
         {/* Affichage des données */}
         <Card>
           <CardHeader className="pb-0">
-            {shouldLoadData && (
+            {(shouldLoadData || TEST_MODE) && (
               <>
                 <CardTitle>
-                  Relevés du {selectedDate ? format(selectedDate, 'dd MMMM yyyy', { locale: fr }) : ''}
+                  {TEST_MODE ? "Données de test" : `Relevés du ${selectedDate ? format(selectedDate, 'dd MMMM yyyy', { locale: fr }) : ''}`}
                 </CardTitle>
                 <CardDescription>
-                  {selectedRegion 
+                  {TEST_MODE ? "Données d'exemple pour tester l'interface" : selectedRegion 
                     ? `Relevés pour la région ${getRegionName(selectedRegion)}` 
                     : 'Tous relevés pour cette date'}
                 </CardDescription>
@@ -754,16 +816,17 @@ export default function Releves() {
           </CardHeader>
           <CardContent className="pt-6">
             {/* Options de filtrage pour les résultats */}
-            {shouldLoadData && !isLoadingReleves && paginatedReleves.length > 0 && (
+            {(shouldLoadData || TEST_MODE) && !isLoadingReleves && paginatedReleves.length > 0 && (
               <div className="flex flex-col md:flex-row gap-4 mb-6">
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
-                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <Search className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     <Input
                       placeholder="Rechercher par région ou maladie..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full"
+                      aria-label="Rechercher dans les relevés par région ou maladie"
                     />
                   </div>
                 </div>
@@ -775,7 +838,7 @@ export default function Releves() {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger className="md:w-[250px]">
+                  <SelectTrigger className="md:w-[250px]" aria-label="Filtrer par maladie">
                     <SelectValue placeholder="Filtrer par maladie" />
                   </SelectTrigger>
                   <SelectContent>
@@ -790,18 +853,19 @@ export default function Releves() {
               </div>
             )}
             
-            {!shouldLoadData ? (
+            {!(shouldLoadData || TEST_MODE) ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <CalendarIcon className="h-12 w-12 text-primary mb-4" />
+                <CalendarIcon className="h-12 w-12 text-primary mb-4" aria-hidden="true" />
                 <h3 className="text-lg font-medium">Aucune donnée chargée</h3>
                 <p className="text-muted-foreground mt-2 max-w-md">
                   Veuillez sélectionner une date puis cliquer sur "Charger les données" pour afficher les relevés.
                 </p>
               </div>
             ) : isLoadingReleves ? (
-              <div className="space-y-4">
+              <div className="space-y-4" aria-label="Chargement des données">
                 <div className="flex justify-center items-center py-8">
-                  <Loader className="h-8 w-8 animate-spin text-primary" />
+                  <Loader className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+                  <span className="sr-only">Chargement des relevés en cours</span>
                 </div>
                 <Table>
                   <TableHeader>
@@ -832,9 +896,9 @@ export default function Releves() {
                   </TableBody>
                 </Table>
               </div>
-            ) : isRelevesError && apiIsActive ? (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
+            ) : isRelevesError && !TEST_MODE ? (
+              <Alert variant="destructive" role="alert">
+                <AlertCircle className="h-4 w-4" aria-hidden="true" />
                 <AlertTitle>Erreur de connexion</AlertTitle>
                 <AlertDescription className="flex flex-col gap-2">
                   <p>Impossible de charger les relevés. Vérifiez que:</p>
@@ -857,7 +921,7 @@ export default function Releves() {
               </Alert>
             ) : paginatedReleves.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
+                <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" aria-hidden="true" />
                 <h3 className="text-lg font-medium">Aucun relevé trouvé</h3>
                 <p className="text-muted-foreground mt-2 max-w-md">
                   {searchTerm || selectedMaladie ? (
@@ -879,7 +943,7 @@ export default function Releves() {
               </div>
             ) : (
               <>
-                <Table>
+                <Table role="table" aria-label="Tableau des relevés épidémiologiques">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[80px]">ID</TableHead>
@@ -909,10 +973,11 @@ export default function Releves() {
                             variant="destructive"
                             size="sm"
                             onClick={() => handleDeleteReleve(releve.idReleve)}
-                            disabled={deleteReleveMutation.isPending || !apiIsActive}
+                            disabled={deleteReleveMutation.isPending || (!TEST_MODE && !apiIsActive)}
+                            aria-label={`Supprimer le relevé ${releve.idReleve}`}
                           >
                             {deleteReleveMutation.isPending && deleteReleveMutation.variables === releve.idReleve ? (
-                              <Loader className="h-4 w-4 animate-spin" />
+                              <Loader className="h-4 w-4 animate-spin" aria-hidden="true" />
                             ) : (
                               "Supprimer"
                             )}
@@ -924,7 +989,7 @@ export default function Releves() {
                 </Table>
                 
                 {totalPages > 1 && (
-                  <div className="mt-4">
+                  <nav aria-label="Navigation des pages" className="mt-4">
                     <Pagination>
                       <PaginationContent>
                         <PaginationItem>
@@ -933,9 +998,9 @@ export default function Releves() {
                             size="icon"
                             disabled={currentPage === 1}
                             onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            aria-label="Page précédente"
                           >
-                            <span className="sr-only">Page précédente</span>
-                            <ChevronLeft className="h-4 w-4" />
+                            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                           </Button>
                         </PaginationItem>
                         
@@ -944,6 +1009,8 @@ export default function Releves() {
                             <PaginationLink
                               isActive={currentPage === i + 1}
                               onClick={() => setCurrentPage(i + 1)}
+                              aria-label={`Aller à la page ${i + 1}`}
+                              aria-current={currentPage === i + 1 ? "page" : undefined}
                             >
                               {i + 1}
                             </PaginationLink>
@@ -959,17 +1026,17 @@ export default function Releves() {
                             size="icon"
                             disabled={currentPage === totalPages}
                             onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            aria-label="Page suivante"
                           >
-                            <span className="sr-only">Page suivante</span>
-                            <ChevronRight className="h-4 w-4" />
+                            <ChevronRight className="h-4 w-4" aria-hidden="true" />
                           </Button>
                         </PaginationItem>
                       </PaginationContent>
                     </Pagination>
-                    <p className="text-center text-sm text-muted-foreground mt-2">
+                    <p className="text-center text-sm text-muted-foreground mt-2" aria-live="polite">
                       Page {currentPage} sur {totalPages}
                     </p>
-                  </div>
+                  </nav>
                 )}
               </>
             )}

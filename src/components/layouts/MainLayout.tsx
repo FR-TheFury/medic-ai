@@ -1,184 +1,215 @@
 
-import { ReactNode } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Link, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
-  ChevronDown, 
-  Database, 
   Home, 
-  LogOut, 
-  Menu, 
-  PieChart, 
-  Settings, 
+  Activity, 
+  Stethoscope, 
+  Globe, 
+  FileBarChart, 
+  TrendingUp,
+  BookOpen,
+  FileText,
   User,
-  Globe,
-  Activity
-} from 'lucide-react';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { useState } from 'react';
+  Settings,
+  LogOut,
+  Menu,
+  X
+} from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { AccessibilityProvider } from "@/components/accessibility/AccessibilityProvider";
+import { AccessibilityToolbar } from "@/components/accessibility/AccessibilityToolbar";
 
 interface MainLayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
-export default function MainLayout({ children }: MainLayoutProps) {
-  const { user, logout, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+const navigation = [
+  { name: "Accueil", href: "/", icon: Home },
+  { name: "Dashboard", href: "/dashboard", icon: Activity },
+  { name: "Maladies", href: "/maladies", icon: Stethoscope },
+  { name: "Pays", href: "/pays", icon: Globe },
+  { name: "Relevés", href: "/releves", icon: FileBarChart },
+  { name: "Prédiction", href: "/prediction", icon: TrendingUp },
+  { name: "Documentation", href: "/documentation", icon: BookOpen },
+  { name: "MSPR", href: "/mspr", icon: FileText },
+];
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+const userNavigation = [
+  { name: "Profil", href: "/profile", icon: User },
+  { name: "Paramètres", href: "/settings", icon: Settings },
+];
+
+export default function MainLayout({ children }: MainLayoutProps) {
+  const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isCurrentPage = (href: string) => {
+    if (href === "/") {
+      return location.pathname === "/";
+    }
+    return location.pathname.startsWith(href);
   };
 
-  // S'assurer que les chemins de navigation sont corrects
-  const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: <Home className="h-5 w-5 mr-2" /> },
-    { path: '/maladies', label: 'Maladies', icon: <Activity className="h-5 w-5 mr-2" /> },
-    { path: '/pays', label: 'Pays', icon: <Globe className="h-5 w-5 mr-2" /> },
-    { path: '/releves', label: 'Relevés', icon: <Database className="h-5 w-5 mr-2" /> },
-    { path: '/prediction', label: 'Prédiction', icon: <PieChart className="h-5 w-5 mr-2" /> },
-    { path: '/settings', label: 'Paramètres', icon: <Settings className="h-5 w-5 mr-2" /> },
-  ];
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background">
-        {children}
-      </div>
-    );
-  }
-
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar for desktop */}
-      <div className={`fixed inset-y-0 z-50 flex w-72 flex-col bg-white shadow-lg transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      }`}>
-        <div className="flex h-14 items-center border-b px-4">
-          <Link to="/dashboard" className="flex items-center font-semibold">
-            <Activity className="h-6 w-6 text-primary mr-2" />
-            <span className="text-xl">Pandemic Tracker</span>
-          </Link>
-        </div>
-        <nav className="flex-1 overflow-auto py-4">
-          <ul className="px-2 space-y-1">
-            {navItems.map((item) => (
-              <li key={item.path}>
-                <Link
-                  to={item.path}
-                  className={`flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted
-                    ${location.pathname === item.path ? 'bg-primary text-primary-foreground' : 'text-foreground hover:text-foreground'}`}
-                  onClick={() => setSidebarOpen(false)}
+    <AccessibilityProvider>
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40">
+          <div className="container mx-auto px-4">
+            <div className="flex h-16 items-center justify-between">
+              {/* Logo */}
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="md:hidden"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  aria-label={mobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+                  aria-expanded={mobileMenuOpen}
+                  aria-controls="mobile-navigation"
                 >
-                  {item.icon}
-                  {item.label}
+                  {mobileMenuOpen ? (
+                    <X className="h-5 w-5" aria-hidden="true" />
+                  ) : (
+                    <Menu className="h-5 w-5" aria-hidden="true" />
+                  )}
+                </Button>
+                <Link 
+                  to="/" 
+                  className="flex items-center gap-2 text-xl font-bold text-primary hover:text-primary/80 transition-colors"
+                  aria-label="Retour à l'accueil"
+                >
+                  <Activity className="h-6 w-6" aria-hidden="true" />
+                  <span>EpiTracker</span>
                 </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <div className="mt-auto border-t p-4">
-          <div className="flex items-center gap-2">
-            <div className="rounded-full bg-primary h-10 w-10 flex items-center justify-center text-primary-foreground">
-              <User className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="font-medium">{user?.username}</div>
-              <div className="text-xs text-muted-foreground">{user?.email}</div>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="ml-auto">
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/profile')}>
-                  <User className="h-4 w-4 mr-2" />
-                  Profil
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/settings')}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Paramètres
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Déconnexion
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </div>
+              </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top navbar */}
-        <header className="flex h-14 items-center gap-4 border-b bg-white px-4 lg:gap-6 lg:px-6">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="lg:hidden"
-          >
-            <Menu className="h-6 w-6" />
-            <span className="sr-only">Toggle menu</span>
-          </Button>
-          <div className="ml-auto flex items-center gap-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="hidden md:flex">
-                  <User className="h-4 w-4 mr-2" />
-                  {user?.username}
-                  <ChevronDown className="h-4 w-4 ml-2" />
+              {/* Navigation desktop */}
+              <nav className="hidden md:flex items-center gap-1" role="navigation" aria-label="Navigation principale">
+                {navigation.map((item) => {
+                  const Icon = item.icon;
+                  const isCurrent = isCurrentPage(item.href);
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                        isCurrent
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                      aria-current={isCurrent ? "page" : undefined}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              {/* User menu */}
+              <div className="flex items-center gap-2">
+                {userNavigation.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Button
+                      key={item.name}
+                      variant="ghost"
+                      size="sm"
+                      asChild
+                      className="hidden sm:flex"
+                    >
+                      <Link 
+                        to={item.href}
+                        aria-label={item.name}
+                      >
+                        <Icon className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    </Button>
+                  );
+                })}
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hidden sm:flex"
+                  aria-label="Se déconnecter"
+                >
+                  <LogOut className="h-4 w-4" aria-hidden="true" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/profile')}>
-                  <User className="h-4 w-4 mr-2" />
-                  Profil
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/settings')}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Paramètres
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Déconnexion
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Navigation mobile */}
+            {mobileMenuOpen && (
+              <nav 
+                id="mobile-navigation"
+                className="md:hidden border-t py-4"
+                role="navigation" 
+                aria-label="Navigation mobile"
+              >
+                <div className="space-y-1">
+                  {navigation.map((item) => {
+                    const Icon = item.icon;
+                    const isCurrent = isCurrentPage(item.href);
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                          isCurrent
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                        onClick={() => setMobileMenuOpen(false)}
+                        aria-current={isCurrent ? "page" : undefined}
+                      >
+                        <Icon className="h-4 w-4" aria-hidden="true" />
+                        {item.name}
+                      </Link>
+                    );
+                  })}
+                  
+                  <div className="border-t pt-4 mt-4">
+                    {userNavigation.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.name}
+                          to={item.href}
+                          className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <Icon className="h-4 w-4" aria-hidden="true" />
+                          {item.name}
+                        </Link>
+                      );
+                    })}
+                    
+                    <button className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors w-full text-left">
+                      <LogOut className="h-4 w-4" aria-hidden="true" />
+                      Se déconnecter
+                    </button>
+                  </div>
+                </div>
+              </nav>
+            )}
           </div>
         </header>
 
         {/* Main content */}
-        <main className="flex-1 overflow-auto p-4 lg:p-6">
+        <main className="container mx-auto px-4 py-6">
           {children}
         </main>
-      </div>
 
-      {/* Overlay to close sidebar on mobile */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden" 
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-    </div>
+        {/* Barre d'outils d'accessibilité */}
+        <AccessibilityToolbar />
+      </div>
+    </AccessibilityProvider>
   );
 }
