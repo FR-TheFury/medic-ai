@@ -13,152 +13,45 @@ import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Plus, Search, Trash2, CalendarIcon } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { DateRange } from 'react-day-picker';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { releves, regions, maladies } from '@/lib/api';
 
 // Interface pour les relevés
 interface Releve {
-  id: number;
-  date: string;
-  region: string;
-  maladie: string;
-  nouveauCas: number;
-  deces: number;
-  guerisons: number;
-  hospitalisations: number;
+  idReleve: number;
+  dateReleve: string;
+  nbNouveauCas: number;
+  nbDeces: number;
+  nbGueri: number;
+  nbHospitalisation: number;
+  nbHospiSoinsIntensif: number;
+  nbVaccineTotalement: number;
+  nbSousRespirateur: number;
+  nbVaccine: number;
+  nbTeste: number;
+  idRegion: number;
+  idMaladie: number;
+  region?: {
+    nomEtat: string;
+  };
+  maladie?: {
+    nomMaladie: string;
+  };
 }
 
-// Données statiques d'exemple (simulant une base de données plus large)
-const mockReleves: Releve[] = [
-  {
-    id: 1,
-    date: '2024-01-15',
-    region: 'Île-de-France',
-    maladie: 'COVID-19',
-    nouveauCas: 1245,
-    deces: 45,
-    guerisons: 980,
-    hospitalisations: 230
-  },
-  {
-    id: 2,
-    date: '2024-01-16',
-    region: 'Occitanie',
-    maladie: 'COVID-19',
-    nouveauCas: 890,
-    deces: 25,
-    guerisons: 760,
-    hospitalisations: 150
-  },
-  {
-    id: 3,
-    date: '2024-01-17',
-    region: 'Auvergne-Rhône-Alpes',
-    maladie: 'Grippe',
-    nouveauCas: 567,
-    deces: 12,
-    guerisons: 450,
-    hospitalisations: 89
-  },
-  {
-    id: 4,
-    date: '2024-01-18',
-    region: 'Provence-Alpes-Côte d\'Azur',
-    maladie: 'COVID-19',
-    nouveauCas: 423,
-    deces: 18,
-    guerisons: 390,
-    hospitalisations: 67
-  },
-  {
-    id: 5,
-    date: '2024-01-19',
-    region: 'Nouvelle-Aquitaine',
-    maladie: 'Grippe',
-    nouveauCas: 334,
-    deces: 8,
-    guerisons: 298,
-    hospitalisations: 45
-  },
-  {
-    id: 6,
-    date: '2024-01-20',
-    region: 'Hauts-de-France',
-    maladie: 'COVID-19',
-    nouveauCas: 678,
-    deces: 22,
-    guerisons: 589,
-    hospitalisations: 112
-  },
-  {
-    id: 7,
-    date: '2024-01-21',
-    region: 'Grand Est',
-    maladie: 'Pneumonie',
-    nouveauCas: 245,
-    deces: 15,
-    guerisons: 198,
-    hospitalisations: 32
-  },
-  {
-    id: 8,
-    date: '2024-01-22',
-    region: 'Pays de la Loire',
-    maladie: 'COVID-19',
-    nouveauCas: 512,
-    deces: 19,
-    guerisons: 445,
-    hospitalisations: 78
-  },
-  {
-    id: 9,
-    date: '2024-01-23',
-    region: 'Bretagne',
-    maladie: 'Grippe',
-    nouveauCas: 389,
-    deces: 11,
-    guerisons: 334,
-    hospitalisations: 54
-  },
-  {
-    id: 10,
-    date: '2024-01-24',
-    region: 'Normandie',
-    maladie: 'COVID-19',
-    nouveauCas: 456,
-    deces: 16,
-    guerisons: 398,
-    hospitalisations: 69
-  },
-  {
-    id: 11,
-    date: '2024-01-25',
-    region: 'Centre-Val de Loire',
-    maladie: 'Pneumonie',
-    nouveauCas: 198,
-    deces: 7,
-    guerisons: 167,
-    hospitalisations: 28
-  },
-  {
-    id: 12,
-    date: '2024-01-26',
-    region: 'Bourgogne-Franche-Comté',
-    maladie: 'COVID-19',
-    nouveauCas: 367,
-    deces: 13,
-    guerisons: 312,
-    hospitalisations: 51
-  }
-];
+interface Region {
+  idRegion: number;
+  nomEtat: string;
+}
 
-const regions = ['Île-de-France', 'Occitanie', 'Auvergne-Rhône-Alpes', 'Provence-Alpes-Côte d\'Azur'];
-const maladies = ['COVID-19', 'Grippe', 'Pneumonie'];
+interface Maladie {
+  idMaladie: number;
+  nomMaladie: string;
+}
 
 const ITEMS_PER_PAGE = 5;
 
 export default function Releves() {
-  const [allReleves, setAllReleves] = useState<Releve[]>(mockReleves);
+  const [allReleves, setAllReleves] = useState<Releve[]>([]);
   const [currentReleves, setCurrentReleves] = useState<Releve[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -166,119 +59,181 @@ export default function Releves() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [regionsData, setRegionsData] = useState<Region[]>([]);
+  const [maladiesData, setMaladiesData] = useState<Maladie[]>([]);
   const [newReleve, setNewReleve] = useState({
-    date: '',
-    region: '',
-    maladie: '',
-    nouveauCas: 0,
-    deces: 0,
-    guerisons: 0,
-    hospitalisations: 0
+    dateReleve: '',
+    idRegion: 0,
+    idMaladie: 0,
+    nbNouveauCas: 0,
+    nbDeces: 0,
+    nbGueri: 0,
+    nbHospitalisation: 0,
+    nbHospiSoinsIntensif: 0,
+    nbVaccineTotalement: 0,
+    nbSousRespirateur: 0,
+    nbVaccine: 0,
+    nbTeste: 0
   });
 
-  // Fonction pour filtrer les relevés selon les critères
-  const getFilteredReleves = () => {
-    let filtered = allReleves;
+  // Charger les régions et maladies pour les selects
+  useEffect(() => {
+    const loadSelectData = async () => {
+      try {
+        const [regionsResponse, maladiesResponse] = await Promise.all([
+          regions.getAll(),
+          maladies.getAll()
+        ]);
+        setRegionsData(regionsResponse.data.slice(0, 50)); // Limiter à 50 régions
+        setMaladiesData(maladiesResponse.data);
+      } catch (error) {
+        console.error('Erreur lors du chargement des données de sélection:', error);
+        toast.error('Erreur lors du chargement des données de sélection');
+      }
+    };
 
-    // Filtre par terme de recherche
-    if (searchTerm) {
-      filtered = filtered.filter(releve =>
-        releve.region.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        releve.maladie.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+    loadSelectData();
+  }, []);
 
-    // Filtre par plage de dates
-    if (dateRange?.from && dateRange?.to) {
-      filtered = filtered.filter(releve => {
-        const releveDate = new Date(releve.date);
-        return releveDate >= dateRange.from! && releveDate <= dateRange.to!;
-      });
-    }
-
-    return filtered;
-  };
-
-  // Fonction pour charger les relevés de la page courante
-  const loadPageData = (page: number) => {
+  // Fonction pour charger les relevés avec filtres
+  const loadReleves = async (page: number = 1) => {
     setIsLoading(true);
+    console.log('Chargement des relevés - page:', page);
     
-    // Simuler un délai de chargement (comme une vraie API)
-    setTimeout(() => {
-      const filteredReleves = getFilteredReleves();
+    try {
+      let relevesData: Releve[] = [];
+      
+      // Si une plage de dates est sélectionnée, utiliser l'endpoint de filtrage par date
+      if (dateRange?.from && dateRange?.to) {
+        const startDate = dateRange.from.toISOString().split('T')[0];
+        const endDate = dateRange.to.toISOString().split('T')[0];
+        console.log('Filtrage par date:', startDate, 'à', endDate);
+        
+        const response = await releves.getByDateRange(startDate, endDate);
+        relevesData = response.data;
+      } else {
+        // Sinon, récupérer tous les relevés
+        const response = await releves.getAll();
+        relevesData = response.data;
+      }
+
+      console.log('Relevés récupérés:', relevesData.length);
+
+      // Filtrer par terme de recherche si nécessaire
+      if (searchTerm) {
+        // Pour rechercher, on doit d'abord récupérer les détails des régions et maladies
+        const filteredReleves = relevesData.filter(releve => {
+          const regionName = regionsData.find(r => r.idRegion === releve.idRegion)?.nomEtat || '';
+          const maladieName = maladiesData.find(m => m.idMaladie === releve.idMaladie)?.nomMaladie || '';
+          
+          return regionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                 maladieName.toLowerCase().includes(searchTerm.toLowerCase());
+        });
+        relevesData = filteredReleves;
+      }
+
+      // Calculer la pagination
+      const totalItems = relevesData.length;
+      const totalPagesCalculated = Math.ceil(totalItems / ITEMS_PER_PAGE);
       const startIndex = (page - 1) * ITEMS_PER_PAGE;
       const endIndex = startIndex + ITEMS_PER_PAGE;
-      const pageData = filteredReleves.slice(startIndex, endIndex);
-      
-      setCurrentReleves(pageData);
-      setTotalPages(Math.ceil(filteredReleves.length / ITEMS_PER_PAGE));
+      const pageData = relevesData.slice(startIndex, endIndex);
+
+      // Enrichir les données avec les noms de région et maladie
+      const enrichedData = pageData.map(releve => ({
+        ...releve,
+        region: { nomEtat: regionsData.find(r => r.idRegion === releve.idRegion)?.nomEtat || 'Région inconnue' },
+        maladie: { nomMaladie: maladiesData.find(m => m.idMaladie === releve.idMaladie)?.nomMaladie || 'Maladie inconnue' }
+      }));
+
+      setCurrentReleves(enrichedData);
+      setTotalPages(totalPagesCalculated);
+      setCurrentPage(page);
+
+      console.log('Page affichée:', page, 'Total pages:', totalPagesCalculated);
+    } catch (error) {
+      console.error('Erreur lors du chargement des relevés:', error);
+      toast.error('Erreur lors du chargement des relevés');
+      setCurrentReleves([]);
+      setTotalPages(1);
+    } finally {
       setIsLoading(false);
-    }, 300);
+    }
   };
 
   // Charger les données initiales
   useEffect(() => {
-    loadPageData(1);
-  }, []);
+    if (regionsData.length > 0 && maladiesData.length > 0) {
+      loadReleves(1);
+    }
+  }, [regionsData, maladiesData]);
 
   // Recharger quand les filtres changent
   useEffect(() => {
-    setCurrentPage(1);
-    loadPageData(1);
+    if (regionsData.length > 0 && maladiesData.length > 0) {
+      loadReleves(1);
+    }
   }, [searchTerm, dateRange]);
 
   // Changer de page
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    loadPageData(page);
+    console.log('Changement de page vers:', page);
+    loadReleves(page);
   };
 
   // Ajouter un nouveau relevé
-  const handleAddReleve = (e: React.FormEvent) => {
+  const handleAddReleve = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!newReleve.date || !newReleve.region || !newReleve.maladie) {
+    if (!newReleve.dateReleve || !newReleve.idRegion || !newReleve.idMaladie) {
       toast.error("Veuillez remplir tous les champs obligatoires");
       return;
     }
 
-    const nouveauReleve: Releve = {
-      id: Date.now(),
-      date: newReleve.date,
-      region: newReleve.region,
-      maladie: newReleve.maladie,
-      nouveauCas: newReleve.nouveauCas,
-      deces: newReleve.deces,
-      guerisons: newReleve.guerisons,
-      hospitalisations: newReleve.hospitalisations
-    };
-
-    setAllReleves([nouveauReleve, ...allReleves]);
-    setIsAddDialogOpen(false);
-    setNewReleve({
-      date: '',
-      region: '',
-      maladie: '',
-      nouveauCas: 0,
-      deces: 0,
-      guerisons: 0,
-      hospitalisations: 0
-    });
-    toast.success("Relevé ajouté avec succès");
-    
-    // Recharger la première page
-    setCurrentPage(1);
-    loadPageData(1);
+    try {
+      console.log('Création du relevé:', newReleve);
+      await releves.create(newReleve);
+      
+      setIsAddDialogOpen(false);
+      setNewReleve({
+        dateReleve: '',
+        idRegion: 0,
+        idMaladie: 0,
+        nbNouveauCas: 0,
+        nbDeces: 0,
+        nbGueri: 0,
+        nbHospitalisation: 0,
+        nbHospiSoinsIntensif: 0,
+        nbVaccineTotalement: 0,
+        nbSousRespirateur: 0,
+        nbVaccine: 0,
+        nbTeste: 0
+      });
+      
+      toast.success("Relevé ajouté avec succès");
+      
+      // Recharger la première page
+      loadReleves(1);
+    } catch (error) {
+      console.error('Erreur lors de la création du relevé:', error);
+      toast.error('Erreur lors de la création du relevé');
+    }
   };
 
   // Supprimer un relevé
-  const handleDeleteReleve = (id: number) => {
+  const handleDeleteReleve = async (id: number) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce relevé ?")) {
-      setAllReleves(allReleves.filter(releve => releve.id !== id));
-      toast.success("Relevé supprimé avec succès");
-      
-      // Recharger la page courante
-      loadPageData(currentPage);
+      try {
+        console.log('Suppression du relevé:', id);
+        await releves.delete(id);
+        toast.success("Relevé supprimé avec succès");
+        
+        // Recharger la page courante
+        loadReleves(currentPage);
+      } catch (error) {
+        console.error('Erreur lors de la suppression du relevé:', error);
+        toast.error('Erreur lors de la suppression du relevé');
+      }
     }
   };
 
@@ -299,7 +254,7 @@ export default function Releves() {
                 Ajouter un relevé
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
               <form onSubmit={handleAddReleve}>
                 <DialogHeader>
                   <DialogTitle>Ajouter un relevé</DialogTitle>
@@ -307,37 +262,37 @@ export default function Releves() {
                     Remplissez les informations pour ajouter un nouveau relevé épidémiologique.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-4 py-4 max-h-96 overflow-y-auto">
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="date" className="text-right">
+                    <Label htmlFor="dateReleve" className="text-right">
                       Date *
                     </Label>
                     <Input
-                      id="date"
+                      id="dateReleve"
                       type="date"
                       className="col-span-3"
-                      value={newReleve.date}
-                      onChange={(e) => setNewReleve({ ...newReleve, date: e.target.value })}
+                      value={newReleve.dateReleve}
+                      onChange={(e) => setNewReleve({ ...newReleve, dateReleve: e.target.value })}
                       required
                     />
                   </div>
                   
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="region" className="text-right">
+                    <Label htmlFor="idRegion" className="text-right">
                       Région *
                     </Label>
                     <div className="col-span-3">
                       <Select 
-                        value={newReleve.region}
-                        onValueChange={(value) => setNewReleve({ ...newReleve, region: value })}
+                        value={newReleve.idRegion.toString()}
+                        onValueChange={(value) => setNewReleve({ ...newReleve, idRegion: parseInt(value) })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Sélectionner une région" />
                         </SelectTrigger>
                         <SelectContent>
-                          {regions.map((region) => (
-                            <SelectItem key={region} value={region}>
-                              {region}
+                          {regionsData.map((region) => (
+                            <SelectItem key={region.idRegion} value={region.idRegion.toString()}>
+                              {region.nomEtat}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -346,21 +301,21 @@ export default function Releves() {
                   </div>
                   
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="maladie" className="text-right">
+                    <Label htmlFor="idMaladie" className="text-right">
                       Maladie *
                     </Label>
                     <div className="col-span-3">
                       <Select 
-                        value={newReleve.maladie}
-                        onValueChange={(value) => setNewReleve({ ...newReleve, maladie: value })}
+                        value={newReleve.idMaladie.toString()}
+                        onValueChange={(value) => setNewReleve({ ...newReleve, idMaladie: parseInt(value) })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Sélectionner une maladie" />
                         </SelectTrigger>
                         <SelectContent>
-                          {maladies.map((maladie) => (
-                            <SelectItem key={maladie} value={maladie}>
-                              {maladie}
+                          {maladiesData.map((maladie) => (
+                            <SelectItem key={maladie.idMaladie} value={maladie.idMaladie.toString()}>
+                              {maladie.nomMaladie}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -369,57 +324,57 @@ export default function Releves() {
                   </div>
                   
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="nouveauCas" className="text-right">
+                    <Label htmlFor="nbNouveauCas" className="text-right">
                       Nouveaux cas
                     </Label>
                     <Input
-                      id="nouveauCas"
+                      id="nbNouveauCas"
                       type="number"
                       className="col-span-3"
-                      value={newReleve.nouveauCas}
-                      onChange={(e) => setNewReleve({ ...newReleve, nouveauCas: parseInt(e.target.value) || 0 })}
+                      value={newReleve.nbNouveauCas}
+                      onChange={(e) => setNewReleve({ ...newReleve, nbNouveauCas: parseInt(e.target.value) || 0 })}
                       min="0"
                     />
                   </div>
                   
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="deces" className="text-right">
+                    <Label htmlFor="nbDeces" className="text-right">
                       Décès
                     </Label>
                     <Input
-                      id="deces"
+                      id="nbDeces"
                       type="number"
                       className="col-span-3"
-                      value={newReleve.deces}
-                      onChange={(e) => setNewReleve({ ...newReleve, deces: parseInt(e.target.value) || 0 })}
+                      value={newReleve.nbDeces}
+                      onChange={(e) => setNewReleve({ ...newReleve, nbDeces: parseInt(e.target.value) || 0 })}
                       min="0"
                     />
                   </div>
                   
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="guerisons" className="text-right">
+                    <Label htmlFor="nbGueri" className="text-right">
                       Guérisons
                     </Label>
                     <Input
-                      id="guerisons"
+                      id="nbGueri"
                       type="number"
                       className="col-span-3"
-                      value={newReleve.guerisons}
-                      onChange={(e) => setNewReleve({ ...newReleve, guerisons: parseInt(e.target.value) || 0 })}
+                      value={newReleve.nbGueri}
+                      onChange={(e) => setNewReleve({ ...newReleve, nbGueri: parseInt(e.target.value) || 0 })}
                       min="0"
                     />
                   </div>
                   
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="hospitalisations" className="text-right">
+                    <Label htmlFor="nbHospitalisation" className="text-right">
                       Hospitalisations
                     </Label>
                     <Input
-                      id="hospitalisations"
+                      id="nbHospitalisation"
                       type="number"
                       className="col-span-3"
-                      value={newReleve.hospitalisations}
-                      onChange={(e) => setNewReleve({ ...newReleve, hospitalisations: parseInt(e.target.value) || 0 })}
+                      value={newReleve.nbHospitalisation}
+                      onChange={(e) => setNewReleve({ ...newReleve, nbHospitalisation: parseInt(e.target.value) || 0 })}
                       min="0"
                     />
                   </div>
@@ -498,21 +453,21 @@ export default function Releves() {
                       </TableRow>
                     ) : (
                       currentReleves.map((releve) => (
-                        <TableRow key={releve.id}>
+                        <TableRow key={releve.idReleve}>
                           <TableCell>
-                            {new Date(releve.date).toLocaleDateString('fr-FR')}
+                            {new Date(releve.dateReleve).toLocaleDateString('fr-FR')}
                           </TableCell>
-                          <TableCell>{releve.region}</TableCell>
-                          <TableCell>{releve.maladie}</TableCell>
-                          <TableCell>{releve.nouveauCas.toLocaleString('fr-FR')}</TableCell>
-                          <TableCell>{releve.deces.toLocaleString('fr-FR')}</TableCell>
-                          <TableCell>{releve.guerisons.toLocaleString('fr-FR')}</TableCell>
-                          <TableCell>{releve.hospitalisations.toLocaleString('fr-FR')}</TableCell>
+                          <TableCell>{releve.region?.nomEtat}</TableCell>
+                          <TableCell>{releve.maladie?.nomMaladie}</TableCell>
+                          <TableCell>{releve.nbNouveauCas?.toLocaleString('fr-FR') || 0}</TableCell>
+                          <TableCell>{releve.nbDeces?.toLocaleString('fr-FR') || 0}</TableCell>
+                          <TableCell>{releve.nbGueri?.toLocaleString('fr-FR') || 0}</TableCell>
+                          <TableCell>{releve.nbHospitalisation?.toLocaleString('fr-FR') || 0}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDeleteReleve(releve.id)}
+                              onClick={() => handleDeleteReleve(releve.idReleve)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -558,7 +513,7 @@ export default function Releves() {
                 )}
 
                 <div className="text-sm text-muted-foreground mt-4 text-center">
-                  Page {currentPage} sur {totalPages} - Affichage de {currentReleves.length} relevé(s) sur {getFilteredReleves().length} au total
+                  Page {currentPage} sur {totalPages} - Affichage de {currentReleves.length} relevé(s)
                 </div>
               </>
             )}
