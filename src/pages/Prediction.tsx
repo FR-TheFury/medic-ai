@@ -127,23 +127,19 @@ export default function Prediction() {
             {predictionResult && (
               <>
                 <PredictionResultCard 
-                  result={predictionResult} 
-                  onClear={clearResults}
+                  pays={predictionResult.country || predictionResult.pays}
+                  valeurPrediction={predictionResult.predictedCases || predictionResult.predictedRate || predictionResult.nombre_hospitalisations || 0}
+                  typePrediction={activeTab === 'mortality' ? 'mortalite' : 'hospitalisation'}
                 />
                 
-                {predictionResult.predictions && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Graphique des prédictions</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <PredictionChart 
-                        predictions={predictionResult.predictions}
-                        type={activeTab}
-                      />
-                    </CardContent>
-                  </Card>
-                )}
+                <PredictionChart 
+                  title="Graphique des prédictions"
+                  description="Évolution prédite basée sur les données actuelles"
+                  data={[{
+                    name: predictionResult.country || predictionResult.pays || 'Inconnu',
+                    value: predictionResult.predictedCases || predictionResult.predictedRate || predictionResult.nombre_hospitalisations || 0
+                  }]}
+                />
               </>
             )}
 
