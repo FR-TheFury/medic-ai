@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layouts/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,6 +48,7 @@ interface Maladie {
 }
 
 const ITEMS_PER_PAGE = 5;
+const MAX_VISIBLE_PAGES = 10;
 
 export default function Releves() {
   const [allReleves, setAllReleves] = useState<Releve[]>([]);
@@ -179,6 +179,23 @@ export default function Releves() {
   const handlePageChange = (page: number) => {
     console.log('Changement de page vers:', page);
     loadReleves(page);
+  };
+
+  // Fonction pour générer les numéros de pages à afficher
+  const getVisiblePages = () => {
+    if (totalPages <= MAX_VISIBLE_PAGES) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const half = Math.floor(MAX_VISIBLE_PAGES / 2);
+    let start = Math.max(currentPage - half, 1);
+    let end = Math.min(start + MAX_VISIBLE_PAGES - 1, totalPages);
+
+    if (end - start + 1 < MAX_VISIBLE_PAGES) {
+      start = Math.max(end - MAX_VISIBLE_PAGES + 1, 1);
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   };
 
   // Ajouter un nouveau relevé
@@ -489,7 +506,27 @@ export default function Releves() {
                           />
                         </PaginationItem>
                         
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        {/* Première page et ellipse si nécessaire */}
+                        {getVisiblePages()[0] > 1 && (
+                          <>
+                            <PaginationItem>
+                              <PaginationLink
+                                onClick={() => handlePageChange(1)}
+                                className="cursor-pointer"
+                              >
+                                1
+                              </PaginationLink>
+                            </PaginationItem>
+                            {getVisiblePages()[0] > 2 && (
+                              <PaginationItem>
+                                <span className="flex h-9 w-9 items-center justify-center text-sm">...</span>
+                              </PaginationItem>
+                            )}
+                          </>
+                        )}
+                        
+                        {/* Pages visibles */}
+                        {getVisiblePages().map((page) => (
                           <PaginationItem key={page}>
                             <PaginationLink
                               onClick={() => handlePageChange(page)}
@@ -500,6 +537,25 @@ export default function Releves() {
                             </PaginationLink>
                           </PaginationItem>
                         ))}
+                        
+                        {/* Ellipse et dernière page si nécessaire */}
+                        {getVisiblePages()[getVisiblePages().length - 1] < totalPages && (
+                          <>
+                            {getVisiblePages()[getVisiblePages().length - 1] < totalPages - 1 && (
+                              <PaginationItem>
+                                <span className="flex h-9 w-9 items-center justify-center text-sm">...</span>
+                              </PaginationItem>
+                            )}
+                            <PaginationItem>
+                              <PaginationLink
+                                onClick={() => handlePageChange(totalPages)}
+                                className="cursor-pointer"
+                              >
+                                {totalPages}
+                              </PaginationLink>
+                            </PaginationItem>
+                          </>
+                        )}
                         
                         <PaginationItem>
                           <PaginationNext 
