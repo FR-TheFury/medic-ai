@@ -4,8 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
+
   const teamMembers = [
     { name: "Téo Debay", role: "Développeur de l'application complète" },
     { name: "Jérome Rose", role: "Développeur des modèles IA" },
@@ -49,7 +52,7 @@ export default function Home() {
           
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">
             Bienvenue sur
-            <span className="text-primary block mt-2">EpiTracker</span>
+            <span className="text-primary block mt-2">PandemicTracker</span>
           </h1>
           
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
@@ -57,16 +60,33 @@ export default function Home() {
           </p>
           
           <div className="flex flex-wrap justify-center gap-4">
-            <Button asChild size="lg">
-              <Link to="/dashboard">
-                Accéder au Dashboard
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link to="/prediction">
-                Faire une Prédiction
-              </Link>
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <Button asChild size="lg">
+                  <Link to="/dashboard">
+                    Accéder au Dashboard
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg">
+                  <Link to="/prediction">
+                    Faire une Prédiction
+                  </Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button asChild size="lg">
+                  <Link to="/login">
+                    Se connecter
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg">
+                  <Link to="/register">
+                    S'inscrire
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -117,7 +137,7 @@ export default function Home() {
 
         {/* Footer */}
         <div className="text-center mt-16 text-gray-500">
-          <p>© 2024 EpiTracker - Projet MSPR</p>
+          <p>© 2024 PandemicTracker - Projet MSPR</p>
         </div>
       </div>
     </div>

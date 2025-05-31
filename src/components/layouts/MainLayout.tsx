@@ -28,7 +28,7 @@ interface MainLayoutProps {
 }
 
 const navigation = [
-  { name: "Accueil", href: "/", icon: Home },
+  { name: "Accueil", href: "/home", icon: Home },
   { name: "Dashboard", href: "/dashboard", icon: Activity },
   { name: "Maladies", href: "/maladies", icon: Stethoscope },
   { name: "Pays", href: "/pays", icon: Globe },
@@ -50,8 +50,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isCurrentPage = (href: string) => {
-    if (href === "/") {
-      return location.pathname === "/";
+    if (href === "/home") {
+      return location.pathname === "/home";
     }
     return location.pathname.startsWith(href);
   };
@@ -86,12 +86,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   )}
                 </Button>
                 <Link 
-                  to="/" 
+                  to="/home" 
                   className="flex items-center gap-2 text-xl font-bold text-primary hover:text-primary/80 transition-colors"
                   aria-label="Retour à l'accueil"
                 >
                   <Activity className="h-6 w-6" aria-hidden="true" />
-                  <span>EpiTracker</span>
+                  <span>PandemicTracker</span>
                 </Link>
               </div>
 

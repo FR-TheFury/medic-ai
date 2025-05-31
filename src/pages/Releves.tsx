@@ -282,13 +282,15 @@ export default function Releves() {
   const createReleveMutation = useMutation({
     mutationFn: async (data: Omit<Releve, 'idReleve' | 'region' | 'maladie'>) => {
       if (TEST_MODE) {
-        // Retourner un objet compatible avec AxiosResponse
+        // Simulation d'une réponse API valide
+        await new Promise(resolve => setTimeout(resolve, 500));
         return {
           data: { id: Date.now() },
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {}
+          config: {},
+          request: {}
         };
       }
       return releves.create(data);
@@ -311,13 +313,15 @@ export default function Releves() {
   const deleteReleveMutation = useMutation({
     mutationFn: async (id: number) => {
       if (TEST_MODE) {
-        // Retourner un objet compatible avec AxiosResponse
+        // Simulation d'une réponse API valide
+        await new Promise(resolve => setTimeout(resolve, 500));
         return {
           data: null,
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {}
+          config: {},
+          request: {}
         };
       }
       return releves.delete(id);
@@ -518,7 +522,7 @@ export default function Releves() {
                               <span>Chargement...</span>
                             </div>
                           ) : (
-                            regionsData?.map((region: Region) => (
+                            regionsData?.filter(region => region && region.idRegion && region.nomEtat).map((region: Region) => (
                               <SelectItem key={region.idRegion} value={String(region.idRegion)}>
                                 {region.nomEtat}
                               </SelectItem>
@@ -548,7 +552,7 @@ export default function Releves() {
                               <span>Chargement...</span>
                             </div>
                           ) : (
-                            maladiesData?.map((maladie: Maladie) => (
+                            maladiesData?.filter(maladie => maladie && maladie.idMaladie && maladie.nomMaladie).map((maladie: Maladie) => (
                               <SelectItem key={maladie.idMaladie} value={String(maladie.idMaladie)}>
                                 {maladie.nomMaladie}
                               </SelectItem>
@@ -764,7 +768,7 @@ export default function Releves() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Toutes les régions</SelectItem>
-                      {regionsData?.map((region: Region) => (
+                      {regionsData?.filter(region => region && region.idRegion && region.nomEtat).map((region: Region) => (
                         <SelectItem key={region.idRegion} value={region.idRegion.toString()}>
                           {region.nomEtat}
                         </SelectItem>
@@ -857,7 +861,7 @@ export default function Releves() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Toutes les maladies</SelectItem>
-                    {maladiesData?.map((maladie: Maladie) => (
+                    {maladiesData?.filter(maladie => maladie && maladie.idMaladie && maladie.nomMaladie).map((maladie: Maladie) => (
                       <SelectItem key={maladie.idMaladie} value={maladie.idMaladie.toString()}>
                         {maladie.nomMaladie}
                       </SelectItem>
