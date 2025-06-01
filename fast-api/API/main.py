@@ -567,22 +567,32 @@ async def predict_hospitalization_from_csv(
 def predict_temporal(data: TemporalPredictionInput):
     """Prédiction temporelle avec modèles GRU/LSTM"""
     try:
+        print(f"Réception requête prédiction temporelle pour {data.country}")
+        
         # Validation des données d'entrée
         historical_data = data.historical_data.model_dump()
         
         # Vérifier que toutes les listes ont 30 éléments
         for key, values in historical_data.items():
             if key != 'dates' and len(values) != 30:
+                print(f"Erreur: {key} a {len(values)} valeurs au lieu de 30")
                 raise HTTPException(
                     status_code=400,
                     detail=f"La série {key} doit contenir exactement 30 valeurs, {len(values)} fournies"
                 )
         
         if len(historical_data['dates']) != 30:
+            print(f"Erreur: {len(historical_data['dates'])} dates au lieu de 30")
             raise HTTPException(
                 status_code=400,
                 detail=f"Il faut exactement 30 dates, {len(historical_data['dates'])} fournies"
             )
+        
+        # Log des données reçues pour debug
+        print(f"Données historiques reçues:")
+        print(f"  - Nouveaux cas: {historical_data['nbNouveauCas'][:5]}... (moyenne: {sum(historical_data['nbNouveauCas'])/30:.1f})")
+        print(f"  - Décès: {historical_data['nbDeces'][:5]}... (moyenne: {sum(historical_data['nbDeces'])/30:.1f})")
+        print(f"  - Hospitalisations: {historical_data['nbHospitalisation'][:5]}... (moyenne: {sum(historical_data['nbHospitalisation'])/30:.1f})")
         
         # Effectuer la prédiction
         result = temporal_predictor.predict(
@@ -591,6 +601,8 @@ def predict_temporal(data: TemporalPredictionInput):
             model_type=data.model_type,
             prediction_horizon=data.prediction_horizon
         )
+        
+        print(f"Résultat de prédiction: {result['predictions']}")
         
         return TemporalPredictionOutput(
             country=data.country,
@@ -601,10 +613,12 @@ def predict_temporal(data: TemporalPredictionInput):
             metrics=result['metrics']
         )
         
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Erreur prédiction temporelle: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Erreur lors de la prédiction: {str(e)}")
 
 @API.get("/prediction/temporal/models/", tags=["Prediction"])

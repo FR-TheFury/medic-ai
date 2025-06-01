@@ -17,6 +17,7 @@ export default function Prediction() {
   const [activeTab, setActiveTab] = useState('new-cases');
 
   const handlePredictionResult = (result: any) => {
+    console.log('Résultat de prédiction reçu:', result);
     setPredictionResult(result);
   };
 
@@ -149,20 +150,77 @@ export default function Prediction() {
             {/* Résultats de prédiction */}
             {predictionResult && (
               <>
-                <PredictionResultCard 
-                  pays={predictionResult.country || predictionResult.pays}
-                  valeurPrediction={predictionResult.predictedCases || predictionResult.predictedRate || predictionResult.nombre_hospitalisations || 0}
-                  typePrediction={activeTab === 'mortality' ? 'mortalite' : 'hospitalisation'}
-                />
+                {activeTab === 'temporal' && predictionResult.predictions ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Brain className="h-5 w-5" />
+                        Prédiction Temporelle
+                      </CardTitle>
+                      <CardDescription>
+                        {predictionResult.country} - {predictionResult.type} - {predictionResult.predictionHorizon} jours
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium">Modèle:</span> {predictionResult.model}
+                        </div>
+                        <div>
+                          <span className="font-medium">Horizon:</span> {predictionResult.predictionHorizon} jours
+                        </div>
+                        {predictionResult.inputSummary && (
+                          <>
+                            <div>
+                              <span className="font-medium">Moyenne historique:</span> {predictionResult.inputSummary.avgCases} cas/jour
+                            </div>
+                            <div>
+                              <span className="font-medium">Dernière semaine:</span> {predictionResult.inputSummary.lastWeekAvg} cas/jour
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium mb-2">Prédictions par jour:</h4>
+                        <div className="space-y-1 text-sm">
+                          {predictionResult.predictions.map((pred: number, index: number) => (
+                            <div key={index} className="flex justify-between">
+                              <span>Jour {index + 1} ({predictionResult.prediction_dates[index]}):</span>
+                              <Badge variant="outline">{pred} nouveaux cas</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="pt-2 border-t">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">Total prédit:</span>
+                          <Badge variant="default">
+                            {predictionResult.predictions.reduce((sum: number, val: number) => sum + val, 0)} cas
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <PredictionResultCard 
+                    pays={predictionResult.country || predictionResult.pays}
+                    valeurPrediction={predictionResult.predictedCases || predictionResult.predictedRate || predictionResult.nombre_hospitalisations || 0}
+                    typePrediction={activeTab === 'mortality' ? 'mortalite' : 'hospitalisation'}
+                  />
+                )}
                 
-                <PredictionChart 
-                  title="Graphique des prédictions"
-                  description="Évolution prédite basée sur les données actuelles"
-                  data={[{
-                    name: predictionResult.country || predictionResult.pays || 'Inconnu',
-                    value: predictionResult.predictedCases || predictionResult.predictedRate || predictionResult.nombre_hospitalisations || 0
-                  }]}
-                />
+                {(activeTab !== 'temporal' || !predictionResult.predictions) && (
+                  <PredictionChart 
+                    title="Graphique des prédictions"
+                    description="Évolution prédite basée sur les données actuelles"
+                    data={[{
+                      name: predictionResult.country || predictionResult.pays || 'Inconnu',
+                      value: predictionResult.predictedCases || predictionResult.predictedRate || predictionResult.nombre_hospitalisations || 0
+                    }]}
+                  />
+                )}
               </>
             )}
 

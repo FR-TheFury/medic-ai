@@ -93,25 +93,51 @@ export default function TemporalModelsForm({ onPredictionResult }: TemporalModel
       }
     }
 
+    // Vérifier que les données ne sont pas toutes à zéro
+    const totalCases = formData.historical_data.nbNouveauCas.reduce((sum, val) => sum + val, 0);
+    if (totalCases === 0) {
+      toast.error("Les données de nouveaux cas ne peuvent pas être toutes nulles");
+      return;
+    }
+
     setIsLoading(true);
     
     try {
-      console.log('Envoi de la prédiction temporelle:', formData);
+      console.log('Envoi de la prédiction temporelle:', {
+        country: formData.country,
+        model_type: formData.model_type,
+        prediction_horizon: formData.prediction_horizon,
+        sample_data: {
+          nbNouveauCas: formData.historical_data.nbNouveauCas.slice(0, 5),
+          total_cases: totalCases
+        }
+      });
       
       const response = await predictions.predictTemporal(formData);
+      
+      console.log('Réponse API:', response.data);
       
       const result = {
         model: `${formData.country} - ${formData.model_type}`,
         type: formData.model_type,
+        country: formData.country,
         predictions: response.data.predictions,
         prediction_dates: response.data.prediction_dates,
         predictionHorizon: formData.prediction_horizon,
         confidence_interval: response.data.confidence_interval,
-        metrics: response.data.metrics
+        metrics: response.data.metrics,
+        // Ajouter des métadonnées pour le debug
+        inputSummary: {
+          totalCases: totalCases,
+          avgCases: Math.round(totalCases / 30),
+          lastWeekAvg: Math.round(formData.historical_data.nbNouveauCas.slice(-7).reduce((sum, val) => sum + val, 0) / 7)
+        }
       };
       
+      console.log('Résultat final:', result);
+      
       onPredictionResult?.(result);
-      toast.success("Prédiction temporelle calculée avec succès");
+      toast.success(`Prédiction temporelle calculée: ${response.data.predictions.join(', ')} nouveaux cas`);
       
     } catch (error: any) {
       console.error('Erreur lors de la prédiction temporelle:', error);

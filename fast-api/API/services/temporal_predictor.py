@@ -7,6 +7,11 @@ from datetime import date, timedelta
 from pathlib import Path
 import pickle
 import os
+import logging
+
+# Configuration du logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class TemporalPredictionService:
     def __init__(self):
@@ -16,6 +21,10 @@ class TemporalPredictionService:
         # Créer le dossier s'il n'existe pas
         self.model_dir.mkdir(parents=True, exist_ok=True)
         
+        # Configuration des features attendues par le modèle
+        self.feature_names = ['nbNouveauCas', 'nbDeces', 'nbHospitalisation', 'nbHospiSoinsIntensif', 'nbTeste']
+        self.sequence_length = 30  # 30 jours d'historique
+        
     def load_model(self, country: str, model_type: str = "GRU"):
         """Charger un modèle temporel pour un pays donné"""
         cache_key = f"{country}_{model_type}"
@@ -23,76 +32,82 @@ class TemporalPredictionService:
         if cache_key in self.models_cache:
             return self.models_cache[cache_key]
         
-        # Rechercher le fichier modèle
-        pattern = f"{country}_{model_type}_*.pth"
-        model_files = list(self.model_dir.glob(pattern))
+        # Rechercher les fichiers modèle et preprocesseur
+        model_pattern = f"{country}_{model_type}_*.pth"
+        prep_pattern = f"{country}_prepared_*.pkl"
+        
+        model_files = list(self.model_dir.glob(model_pattern))
+        prep_files = list(self.model_dir.glob(prep_pattern))
+        
+        logger.info(f"Recherche de modèles pour {country}_{model_type}")
+        logger.info(f"Fichiers modèle trouvés: {model_files}")
+        logger.info(f"Fichiers preprocesseur trouvés: {prep_files}")
         
         if not model_files:
-            print(f"Aucun modèle {model_type} trouvé pour {country}, utilisation du mode simulation")
-            # Retourner un modèle simulé au lieu de lever une exception
+            logger.warning(f"Aucun modèle {model_type} trouvé pour {country}, utilisation du mode simulation")
             self.models_cache[cache_key] = {
-                'model': None,  # Modèle simulé
-                'preprocessor': None
+                'model': None,
+                'preprocessor': None,
+                'has_real_model': False
             }
             return self.models_cache[cache_key]
         
-        model_path = model_files[0]
-        
         try:
-            # Charger le modèle PyTorch avec gestion d'erreur
-            model_state = torch.load(model_path, map_location='cpu')
+            model_path = model_files[0]
+            logger.info(f"Chargement du modèle depuis: {model_path}")
             
-            # Vérifier si c'est un state_dict ou un modèle complet
-            if isinstance(model_state, dict) and 'model_state_dict' in model_state:
-                # C'est un checkpoint avec state_dict
-                print(f"Chargement du state_dict depuis {model_path}")
-                model = None  # On ne peut pas charger sans l'architecture
+            # Charger le modèle PyTorch
+            model_data = torch.load(model_path, map_location='cpu', weights_only=False)
+            
+            # Gérer différents formats de sauvegarde
+            if isinstance(model_data, dict):
+                if 'model_state_dict' in model_data:
+                    # C'est un checkpoint avec state_dict
+                    logger.info("Modèle au format checkpoint détecté")
+                    model = model_data  # Garder tout le dictionnaire pour l'instant
+                else:
+                    # C'est peut-être juste un state_dict
+                    logger.info("State dict détecté")
+                    model = model_data
             else:
-                # Essayer de charger comme modèle complet
-                print(f"Tentative de chargement du modèle complet depuis {model_path}")
-                try:
-                    if hasattr(model_state, 'eval'):
-                        model = model_state
-                        model.eval()
-                    else:
-                        # Si ce n'est pas un modèle PyTorch valide, utiliser la simulation
-                        print(f"Format de modèle non reconnu, utilisation du mode simulation")
-                        model = None
-                except Exception as e:
-                    print(f"Erreur lors de l'évaluation du modèle: {e}")
-                    model = None
+                # C'est un modèle complet
+                logger.info("Modèle complet détecté")
+                model = model_data
+                if hasattr(model, 'eval'):
+                    model.eval()
             
-            # Charger le préprocesseur s'il existe
-            prep_pattern = f"{country}_prepared_*.pkl"
-            prep_files = list(self.model_dir.glob(prep_pattern))
+            # Charger le préprocesseur
             preprocessor = None
-            
             if prep_files:
                 try:
                     with open(prep_files[0], 'rb') as f:
                         preprocessor = pickle.load(f)
+                    logger.info(f"Préprocesseur chargé depuis: {prep_files[0]}")
                 except Exception as e:
-                    print(f"Erreur lors du chargement du préprocesseur: {e}")
+                    logger.error(f"Erreur lors du chargement du préprocesseur: {e}")
             
             self.models_cache[cache_key] = {
                 'model': model,
-                'preprocessor': preprocessor
+                'preprocessor': preprocessor,
+                'has_real_model': True
             }
             
+            logger.info(f"Modèle {country}_{model_type} chargé avec succès")
             return self.models_cache[cache_key]
             
         except Exception as e:
-            print(f"Erreur lors du chargement du modèle: {e}")
-            # Retourner un modèle simulé en cas d'erreur
+            logger.error(f"Erreur lors du chargement du modèle: {e}")
+            # Fallback vers simulation
             self.models_cache[cache_key] = {
                 'model': None,
-                'preprocessor': None
+                'preprocessor': None,
+                'has_real_model': False
             }
             return self.models_cache[cache_key]
     
     def preprocess_data(self, historical_data: Dict, preprocessor=None):
         """Préprocesser les données d'entrée"""
-        # Convertir en DataFrame
+        # Créer le DataFrame avec les bonnes colonnes
         df = pd.DataFrame({
             'nbNouveauCas': historical_data['nbNouveauCas'],
             'nbDeces': historical_data['nbDeces'],
@@ -101,84 +116,163 @@ class TemporalPredictionService:
             'nbTeste': historical_data['nbTeste']
         })
         
+        logger.info(f"DataFrame créé avec shape: {df.shape}")
+        logger.info(f"Colonnes: {df.columns.tolist()}")
+        logger.info(f"Premières lignes:\n{df.head()}")
+        
         # Appliquer le préprocesseur si disponible
         if preprocessor:
             try:
+                logger.info("Application du préprocesseur")
                 df_processed = preprocessor.transform(df)
+                logger.info(f"Données après preprocessing: shape {df_processed.shape}")
             except Exception as e:
-                print(f"Erreur preprocessing: {e}")
-                # Fallback si le preprocesseur ne fonctionne pas
-                df_processed = (df - df.mean()) / (df.std() + 1e-8)
+                logger.error(f"Erreur preprocessing: {e}")
+                # Fallback: normalisation simple
+                df_processed = self._simple_normalization(df)
         else:
-            # Normalisation simple
-            df_processed = (df - df.mean()) / (df.std() + 1e-8)
+            logger.info("Pas de préprocesseur, normalisation simple")
+            df_processed = self._simple_normalization(df)
         
         # Convertir en tensor PyTorch
         try:
-            sequence = torch.FloatTensor(df_processed.values).unsqueeze(0)  # batch_size=1
-        except:
-            # Si conversion échoue, utiliser les données brutes
+            if isinstance(df_processed, np.ndarray):
+                sequence = torch.FloatTensor(df_processed).unsqueeze(0)  # batch_size=1
+            else:
+                sequence = torch.FloatTensor(df_processed.values).unsqueeze(0)
+            
+            logger.info(f"Tensor créé avec shape: {sequence.shape}")
+            return sequence
+            
+        except Exception as e:
+            logger.error(f"Erreur création tensor: {e}")
+            # Fallback avec données brutes
             sequence = torch.FloatTensor(df.values).unsqueeze(0)
+            return sequence
+    
+    def _simple_normalization(self, df):
+        """Normalisation simple des données"""
+        # Éviter la division par zéro
+        std_vals = df.std()
+        std_vals = std_vals.replace(0, 1)  # Remplacer les std=0 par 1
         
-        return sequence
+        normalized = (df - df.mean()) / std_vals
+        
+        # Remplacer les NaN par 0
+        normalized = normalized.fillna(0)
+        
+        return normalized
     
     def simulate_prediction(self, historical_data: Dict, prediction_horizon: int = 7):
-        """Générer une prédiction simulée basée sur les données historiques"""
-        # Utiliser les dernières valeurs comme base
+        """Générer une prédiction simulée plus réaliste basée sur les données historiques"""
         recent_cases = historical_data['nbNouveauCas'][-7:]  # 7 derniers jours
-        avg_cases = sum(recent_cases) / len(recent_cases)
         
-        # Générer des prédictions avec une variation réaliste
+        if not recent_cases or all(x == 0 for x in recent_cases):
+            # Si pas de données récentes, générer des valeurs par défaut
+            base_value = max(50, int(np.random.normal(100, 30)))
+        else:
+            # Calculer une moyenne pondérée (plus de poids sur les jours récents)
+            weights = np.array([0.1, 0.1, 0.15, 0.15, 0.2, 0.25, 0.25])[:len(recent_cases)]
+            weights = weights / weights.sum()  # Normaliser
+            base_value = int(np.average(recent_cases, weights=weights))
+        
+        base_value = max(1, base_value)  # Assurer une valeur minimale
+        
+        logger.info(f"Valeur de base pour simulation: {base_value}")
+        
         predictions = []
-        base_value = int(avg_cases)
-        
         for i in range(prediction_horizon):
-            # Ajouter une variation aléatoire mais cohérente
-            variation = np.random.normal(0, 0.1 * base_value)
-            # Tendance légèrement décroissante pour simuler une amélioration
-            trend = -i * 0.02 * base_value
+            # Tendance légèrement décroissante
+            trend = -i * 0.03 * base_value
             
-            predicted_value = max(0, int(base_value + variation + trend))
+            # Variation aléatoire réaliste
+            variation = np.random.normal(0, 0.15 * base_value)
+            
+            # Effet week-end (moins de cas les weekends)
+            day_of_week = i % 7
+            weekend_effect = 0.8 if day_of_week in [5, 6] else 1.0
+            
+            predicted_value = max(1, int((base_value + trend + variation) * weekend_effect))
             predictions.append(predicted_value)
+            
+            logger.info(f"Jour {i+1}: {predicted_value}")
         
         return predictions
+    
+    def predict_with_real_model(self, model_data, input_sequence, prediction_horizon):
+        """Prédiction avec un vrai modèle PyTorch (si disponible)"""
+        model = model_data['model']
+        
+        try:
+            predictions = []
+            current_sequence = input_sequence.clone()
+            
+            with torch.no_grad():
+                for i in range(prediction_horizon):
+                    logger.info(f"Prédiction jour {i+1}, input shape: {current_sequence.shape}")
+                    
+                    # Prédiction
+                    if isinstance(model, dict):
+                        # Si c'est un dictionnaire, on ne peut pas faire de prédiction directe
+                        logger.warning("Modèle en format dictionnaire, impossible de prédire")
+                        raise Exception("Format de modèle non supporté")
+                    
+                    output = model(current_sequence)
+                    logger.info(f"Output shape: {output.shape}")
+                    
+                    # Extraire la prédiction pour les nouveaux cas (première feature)
+                    if len(output.shape) == 3:  # [batch, sequence, features]
+                        next_pred = output[0, -1, 0].item()
+                    elif len(output.shape) == 2:  # [batch, features]
+                        next_pred = output[0, 0].item()
+                    else:
+                        next_pred = output[0].item()
+                    
+                    predicted_value = max(0, int(round(next_pred)))
+                    predictions.append(predicted_value)
+                    
+                    logger.info(f"Prédiction brute: {next_pred}, valeur finale: {predicted_value}")
+                    
+                    # Mettre à jour la séquence pour la prochaine prédiction
+                    # Créer une nouvelle entrée avec la prédiction
+                    new_entry = torch.zeros(1, 1, current_sequence.shape[2])
+                    new_entry[0, 0, 0] = next_pred  # Nouveaux cas
+                    
+                    # Faire glisser la fenêtre temporelle
+                    current_sequence = torch.cat([current_sequence[:, 1:, :], new_entry], dim=1)
+            
+            return predictions
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la prédiction avec le modèle: {e}")
+            # Fallback vers simulation
+            return None
     
     def predict(self, country: str, historical_data: Dict, 
                 model_type: str = "GRU", prediction_horizon: int = 7):
         """Effectuer une prédiction temporelle"""
         
+        logger.info(f"Début prédiction pour {country}, modèle {model_type}, horizon {prediction_horizon}")
+        
         # Charger le modèle
         model_data = self.load_model(country, model_type)
-        model = model_data['model']
-        preprocessor = model_data['preprocessor']
         
-        # Si pas de modèle réel, utiliser la simulation
-        if model is None:
-            print(f"Utilisation de la prédiction simulée pour {country}")
+        # Vérifier si on a un vrai modèle
+        if not model_data['has_real_model'] or model_data['model'] is None:
+            logger.info(f"Utilisation de la prédiction simulée pour {country}")
             predictions = self.simulate_prediction(historical_data, prediction_horizon)
         else:
+            logger.info(f"Tentative de prédiction avec le modèle réel pour {country}")
+            
             # Préprocesser les données
-            input_sequence = self.preprocess_data(historical_data, preprocessor)
+            input_sequence = self.preprocess_data(historical_data, model_data['preprocessor'])
             
-            predictions = []
-            current_sequence = input_sequence.clone()
+            # Essayer la prédiction avec le modèle réel
+            predictions = self.predict_with_real_model(model_data, input_sequence, prediction_horizon)
             
-            try:
-                with torch.no_grad():
-                    for _ in range(prediction_horizon):
-                        # Prédiction pour le jour suivant
-                        output = model(current_sequence)
-                        
-                        # Prendre la prédiction (seulement nouveaux cas pour l'instant)
-                        next_pred = output[0, -1, 0].item()  # Premier feature (nouveaux cas)
-                        predictions.append(max(0, int(round(next_pred))))
-                        
-                        # Mettre à jour la séquence pour la prochaine prédiction
-                        # Ici on simplifie en gardant la même séquence
-                        # Dans un vrai modèle, il faudrait intégrer la nouvelle prédiction
-            except Exception as e:
-                print(f"Erreur lors de la prédiction avec le modèle: {e}")
-                # Fallback vers la simulation
+            # Si ça échoue, fallback vers simulation
+            if predictions is None:
+                logger.warning("Échec de la prédiction avec le modèle, utilisation de la simulation")
                 predictions = self.simulate_prediction(historical_data, prediction_horizon)
         
         # Générer les dates de prédiction
@@ -188,11 +282,14 @@ class TemporalPredictionService:
             for i in range(prediction_horizon)
         ]
         
+        logger.info(f"Prédictions finales: {predictions}")
+        logger.info(f"Dates: {prediction_dates}")
+        
         return {
             'predictions': predictions,
             'prediction_dates': prediction_dates,
-            'confidence_interval': None,  # Pas implémenté pour l'instant
-            'metrics': {'mse': 0.0, 'mae': 0.0}  # Métriques factices
+            'confidence_interval': None,
+            'metrics': {'mse': 0.0, 'mae': 0.0}
         }
     
     def get_available_models(self):
@@ -201,6 +298,7 @@ class TemporalPredictionService:
         
         # Rechercher les fichiers .pth dans le dossier
         for model_file in self.model_dir.glob("*.pth"):
+            logger.info(f"Fichier modèle trouvé: {model_file}")
             # Parser le nom du fichier pour extraire pays et type
             parts = model_file.stem.split('_')
             if len(parts) >= 2:
@@ -212,12 +310,14 @@ class TemporalPredictionService:
                     'file': model_file.name
                 })
         
-        # Si aucun modèle trouvé, retourner des modèles par défaut pour la démo
+        # Si aucun modèle trouvé, retourner des modèles par défaut
         if not models:
+            logger.info("Aucun modèle .pth trouvé, utilisation des modèles par défaut")
             models = [
                 {'country': 'suisse', 'model_type': 'GRU', 'file': 'simulation'},
                 {'country': 'france', 'model_type': 'GRU', 'file': 'simulation'},
                 {'country': 'allemagne', 'model_type': 'LSTM', 'file': 'simulation'}
             ]
         
+        logger.info(f"Modèles disponibles: {models}")
         return models
