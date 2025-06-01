@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layouts/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -85,10 +84,12 @@ export default function Releves() {
           regions.getAll(),
           maladies.getAll()
         ]);
-        setRegionsData(regionsResponse.data.slice(0, 50)); // Limiter à 50 régions
-        setMaladiesData(maladiesResponse.data);
-        console.log('Régions chargées:', regionsResponse.data.length);
-        console.log('Maladies chargées:', maladiesResponse.data.length);
+        
+        console.log('Régions chargées depuis API:', regionsResponse.data);
+        console.log('Maladies chargées depuis API:', maladiesResponse.data);
+        
+        setRegionsData(regionsResponse.data || []);
+        setMaladiesData(maladiesResponse.data || []);
       } catch (error) {
         console.error('Erreur lors du chargement des données de sélection:', error);
         toast.error('Erreur lors du chargement des données de sélection');
@@ -97,6 +98,23 @@ export default function Releves() {
 
     loadSelectData();
   }, []);
+
+  // Fonction pour enrichir un relevé avec les noms de région et maladie
+  const enrichReleve = (releve: Releve) => {
+    const region = regionsData.find(r => r.idRegion === releve.idRegion);
+    const maladie = maladiesData.find(m => m.idMaladie === releve.idMaladie);
+    
+    const regionName = region?.nomEtat || 'Région Inconnue';
+    const maladieName = maladie?.nomMaladie || 'Maladie Inconnue';
+    
+    console.log(`Enrichissement relevé ${releve.idReleve}: idRegion=${releve.idRegion} -> ${regionName}, idMaladie=${releve.idMaladie} -> ${maladieName}`);
+    
+    return {
+      ...releve,
+      region: { nomEtat: regionName },
+      maladie: { nomMaladie: maladieName }
+    };
+  };
 
   // Fonction pour charger les relevés avec filtres
   const loadReleves = async (page: number = 1) => {
@@ -125,8 +143,9 @@ export default function Releves() {
       // Filtrer par terme de recherche si nécessaire
       if (searchTerm && regionsData.length > 0 && maladiesData.length > 0) {
         const filteredReleves = relevesData.filter(releve => {
-          const regionName = regionsData.find(r => r.idRegion === releve.idRegion)?.nomEtat || 'Région Inconnue';
-          const maladieName = maladiesData.find(m => m.idMaladie === releve.idMaladie)?.nomMaladie || 'Maladie Inconnue';
+          const enrichedReleve = enrichReleve(releve);
+          const regionName = enrichedReleve.region?.nomEtat || '';
+          const maladieName = enrichedReleve.maladie?.nomMaladie || '';
           
           return regionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                  maladieName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -142,21 +161,7 @@ export default function Releves() {
       const pageData = relevesData.slice(startIndex, endIndex);
 
       // Enrichir les données avec les noms de région et maladie
-      const enrichedData = pageData.map(releve => {
-        const region = regionsData.find(r => r.idRegion === releve.idRegion);
-        const maladie = maladiesData.find(m => m.idMaladie === releve.idMaladie);
-        
-        const regionName = region?.nomEtat || 'Région Inconnue';
-        const maladieName = maladie?.nomMaladie || 'Maladie Inconnue';
-        
-        console.log(`Relevé ${releve.idReleve}: Région ${releve.idRegion} -> ${regionName}, Maladie ${releve.idMaladie} -> ${maladieName}`);
-        
-        return {
-          ...releve,
-          region: { nomEtat: regionName },
-          maladie: { nomMaladie: maladieName }
-        };
-      });
+      const enrichedData = pageData.map(enrichReleve);
 
       setCurrentReleves(enrichedData);
       setTotalPages(totalPagesCalculated);
@@ -176,6 +181,7 @@ export default function Releves() {
   // Charger les données initiales
   useEffect(() => {
     if (regionsData.length > 0 && maladiesData.length > 0) {
+      console.log('Chargement initial des relevés avec', regionsData.length, 'régions et', maladiesData.length, 'maladies');
       loadReleves(1);
     }
   }, [regionsData, maladiesData]);
@@ -351,6 +357,7 @@ export default function Releves() {
                       </Select>
                     </div>
                   </div>
+                  
                   
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="nbNouveauCas" className="text-right">
@@ -582,6 +589,8 @@ export default function Releves() {
                     )}
                   </TableBody>
                 </Table>
+
+                
 
                 {totalPages > 1 && (
                   <div className="flex justify-center mt-6">
