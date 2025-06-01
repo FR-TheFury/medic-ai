@@ -220,6 +220,22 @@ export const predictions = {
       'Content-Type': 'multipart/form-data',
     },
   }),
+
+  predictTemporal: (data: {
+    country: string;
+    model_type: string;
+    historical_data: {
+      nbNouveauCas: number[];
+      nbDeces: number[];
+      nbHospitalisation: number[];
+      nbHospiSoinsIntensif: number[];
+      nbTeste: number[];
+      dates: string[];
+    };
+    prediction_horizon: number;
+  }) => api.post('/prediction/temporal/', data),
+
+  getTemporalModels: () => api.get('/prediction/temporal/models/'),
 };
 
 export default api;

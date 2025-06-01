@@ -121,13 +121,12 @@ export default function Releves() {
       }
 
       console.log('Relevés récupérés:', relevesData.length);
-      console.log('Premier relevé:', relevesData[0]);
 
       // Filtrer par terme de recherche si nécessaire
       if (searchTerm && regionsData.length > 0 && maladiesData.length > 0) {
         const filteredReleves = relevesData.filter(releve => {
-          const regionName = regionsData.find(r => r.idRegion === releve.idRegion)?.nomEtat || '';
-          const maladieName = maladiesData.find(m => m.idMaladie === releve.idMaladie)?.nomMaladie || '';
+          const regionName = regionsData.find(r => r.idRegion === releve.idRegion)?.nomEtat || 'Région Inconnue';
+          const maladieName = maladiesData.find(m => m.idMaladie === releve.idMaladie)?.nomMaladie || 'Maladie Inconnue';
           
           return regionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                  maladieName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -144,8 +143,11 @@ export default function Releves() {
 
       // Enrichir les données avec les noms de région et maladie
       const enrichedData = pageData.map(releve => {
-        const regionName = regionsData.find(r => r.idRegion === releve.idRegion)?.nomEtat || `Région ID: ${releve.idRegion}`;
-        const maladieName = maladiesData.find(m => m.idMaladie === releve.idMaladie)?.nomMaladie || `Maladie ID: ${releve.idMaladie}`;
+        const region = regionsData.find(r => r.idRegion === releve.idRegion);
+        const maladie = maladiesData.find(m => m.idMaladie === releve.idMaladie);
+        
+        const regionName = region?.nomEtat || 'Région Inconnue';
+        const maladieName = maladie?.nomMaladie || 'Maladie Inconnue';
         
         console.log(`Relevé ${releve.idReleve}: Région ${releve.idRegion} -> ${regionName}, Maladie ${releve.idMaladie} -> ${maladieName}`);
         

@@ -16,7 +16,8 @@ import io
 # Importer Base depuis le module database
 from .database import Base, engine, SessionLocal
 from . import models, crud  # S'assurer que les modèles et fonctions CRUD sont importés
-
+from .schemas.temporal_prediction import TemporalPredictionInput, TemporalPredictionOutput
+from .services.temporal_predictor import TemporalPredictionService
 
 Base.metadata.create_all(bind=engine)
 
@@ -93,6 +94,9 @@ API.add_middleware(
     expose_headers=["*"],  # Exposer tous les en-têtes
 )
 
+# Initialize temporal prediction service
+temporal_predictor = TemporalPredictionService()
+
 # ------------------ Dépendance DB ------------------
 def get_db():
     db = SessionLocal()
@@ -100,13 +104,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-# ... keep existing code (définitions des modèles Pydantic, routes génériques et autres endpoints API) ...
-
-# Ajouter une route racine pour faciliter la vérification de l'API
-@API.get("/")
-def read_root():
-    return {"status": "online", "message": "L'API fonctionne correctement"}
 
 # ------------------ Pydantic Schemas ------------------
 class MaladieBase(BaseModel):
@@ -566,6 +563,59 @@ async def predict_hospitalization_from_csv(
         print(f"Erreur lors du traitement du CSV: {e}")
         raise HTTPException(status_code=500, detail=f"Erreur lors du traitement du fichier: {str(e)}")
 
+@API.post("/prediction/temporal/", response_model=TemporalPredictionOutput, tags=["Prediction"])
+def predict_temporal(data: TemporalPredictionInput):
+    """Prédiction temporelle avec modèles GRU/LSTM"""
+    try:
+        # Validation des données d'entrée
+        historical_data = data.historical_data.model_dump()
+        
+        # Vérifier que toutes les listes ont 30 éléments
+        for key, values in historical_data.items():
+            if key != 'dates' and len(values) != 30:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"La série {key} doit contenir exactement 30 valeurs, {len(values)} fournies"
+                )
+        
+        if len(historical_data['dates']) != 30:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Il faut exactement 30 dates, {len(historical_data['dates'])} fournies"
+            )
+        
+        # Effectuer la prédiction
+        result = temporal_predictor.predict(
+            country=data.country.lower(),
+            historical_data=historical_data,
+            model_type=data.model_type,
+            prediction_horizon=data.prediction_horizon
+        )
+        
+        return TemporalPredictionOutput(
+            country=data.country,
+            model_type=data.model_type,
+            predictions=result['predictions'],
+            prediction_dates=result['prediction_dates'],
+            confidence_interval=result['confidence_interval'],
+            metrics=result['metrics']
+        )
+        
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        print(f"Erreur prédiction temporelle: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la prédiction: {str(e)}")
+
+@API.get("/prediction/temporal/models/", tags=["Prediction"])
+def get_temporal_models():
+    """Obtenir la liste des modèles temporels disponibles"""
+    try:
+        models = temporal_predictor.get_available_models()
+        return {"models": models}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération des modèles: {str(e)}")
+
 # ------------------ Appliquer routes ------------------
 # Pour les maladies
 generate_routes(
@@ -693,3 +743,7 @@ generate_routes(
 def read_variants_by_maladie(maladie_id: int, db: Session = Depends(get_db)):
     """Récupérer les variants par maladie"""
     return crud.get_variants_by_maladie(db, maladie_id)
+
+@API.get("/")
+def read_root():
+    return {"status": "online", "message": "L'API fonctionne correctement"}
