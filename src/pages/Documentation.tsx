@@ -16,6 +16,7 @@ export default function Documentation() {
         <Tabs defaultValue="overview">
           <TabsList className="w-full">
             <TabsTrigger value="overview" className="flex-1">Vue d'ensemble</TabsTrigger>
+            <TabsTrigger value="ai-integration" className="flex-1">Intégration IA</TabsTrigger>
             <TabsTrigger value="frontend" className="flex-1">Frontend</TabsTrigger>
             <TabsTrigger value="backend" className="flex-1">Backend</TabsTrigger>
             <TabsTrigger value="models" className="flex-1">Modèles IA</TabsTrigger>
@@ -58,6 +59,309 @@ export default function Documentation() {
                   <li>
                     <strong>Modèles IA:</strong> Modèles préentraînés stockés dans le backend
                   </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="ai-integration" className="mt-6 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Comment fonctionne l'intégration IA</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p>
+                  Notre application utilise des modèles d'intelligence artificielle pour prédire l'évolution 
+                  des maladies infectieuses. Voici comment tout s'articule de manière simple.
+                </p>
+                
+                <h3 className="text-lg font-medium mt-4">Schéma général</h3>
+                <div className="bg-muted p-4 rounded-md">
+                  <pre className="text-sm">
+{`Utilisateur → Interface Web → API FastAPI → Modèles IA → Résultats
+    ↓              ↓               ↓             ↓           ↓
+ Saisit les    Page de        Traite les    Calcule la   Affiche la
+  données    prédiction      requêtes     prédiction    prédiction`}
+                  </pre>
+                </div>
+                
+                <h3 className="text-lg font-medium mt-4">Étapes simples</h3>
+                <ol className="list-decimal pl-5 space-y-2">
+                  <li>
+                    <strong>L'utilisateur entre ses données</strong> : sur la page de prédiction, 
+                    il saisit des informations comme le nombre de cas, la population, etc.
+                  </li>
+                  <li>
+                    <strong>Le frontend envoie les données</strong> : l'interface web transmet 
+                    automatiquement ces données à notre API.
+                  </li>
+                  <li>
+                    <strong>L'API charge le bon modèle</strong> : selon le pays et le type de 
+                    prédiction, elle sélectionne le modèle d'IA approprié.
+                  </li>
+                  <li>
+                    <strong>Le modèle calcule la prédiction</strong> : l'IA analyse les données 
+                    et produit une prédiction.
+                  </li>
+                  <li>
+                    <strong>Le résultat est affiché</strong> : la prédiction retourne vers 
+                    l'interface et s'affiche à l'utilisateur.
+                  </li>
+                </ol>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Types de modèles disponibles</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <h3 className="text-lg font-medium">Modèles classiques</h3>
+                <p>
+                  Ces modèles utilisent des techniques éprouvées de machine learning pour faire 
+                  des prédictions rapides et fiables.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  <div className="border rounded-lg p-3">
+                    <h4 className="font-medium text-blue-600">Hospitalisations</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Prédit combien de personnes auront besoin d'être hospitalisées
+                    </p>
+                  </div>
+                  <div className="border rounded-lg p-3">
+                    <h4 className="font-medium text-green-600">Nouveaux cas</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Estime le nombre de nouvelles infections à venir
+                    </p>
+                  </div>
+                  <div className="border rounded-lg p-3">
+                    <h4 className="font-medium text-red-600">Taux de mortalité</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Calcule le pourcentage de décès attendu
+                    </p>
+                  </div>
+                </div>
+                
+                <h3 className="text-lg font-medium mt-6">Modèles temporels</h3>
+                <p>
+                  Ces modèles analysent l'évolution dans le temps pour faire des prédictions 
+                  sur plusieurs jours ou semaines.
+                </p>
+                
+                <div className="border rounded-lg p-3 mt-4">
+                  <h4 className="font-medium text-purple-600">Prédictions LSTM</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Utilise l'historique des 30 derniers jours pour prédire les 7 prochains jours
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Comment les données circulent</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <h3 className="text-lg font-medium">Du frontend vers l'IA</h3>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-medium">1</div>
+                    <div>
+                      <p className="font-medium">Formulaire de saisie</p>
+                      <p className="text-sm text-muted-foreground">
+                        L'utilisateur remplit le formulaire avec les données épidémiologiques
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-medium">2</div>
+                    <div>
+                      <p className="font-medium">Validation des données</p>
+                      <p className="text-sm text-muted-foreground">
+                        Le frontend vérifie que toutes les données sont correctes
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-medium">3</div>
+                    <div>
+                      <p className="font-medium">Envoi à l'API</p>
+                      <p className="text-sm text-muted-foreground">
+                        Les données sont envoyées au backend via une requête HTTP
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-medium">4</div>
+                    <div>
+                      <p className="font-medium">Traitement IA</p>
+                      <p className="text-sm text-muted-foreground">
+                        Le modèle d'IA analyse les données et calcule la prédiction
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center text-red-600 font-medium">5</div>
+                    <div>
+                      <p className="font-medium">Retour du résultat</p>
+                      <p className="text-sm text-muted-foreground">
+                        La prédiction est renvoyée et affichée dans l'interface
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Points d'accès API (Endpoints)</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p>
+                  Voici les principales adresses que le frontend utilise pour communiquer avec l'IA :
+                </p>
+                
+                <div className="space-y-3">
+                  <div className="border-l-4 border-blue-500 pl-4">
+                    <p className="font-mono text-sm bg-muted px-2 py-1 rounded">
+                      POST /prediction/hospitalisation/
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Prédire le nombre d'hospitalisations avec des données manuelles
+                    </p>
+                  </div>
+                  
+                  <div className="border-l-4 border-green-500 pl-4">
+                    <p className="font-mono text-sm bg-muted px-2 py-1 rounded">
+                      POST /prediction/hospitalisation/csv/
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Prédire avec un fichier CSV contenant plusieurs lignes de données
+                    </p>
+                  </div>
+                  
+                  <div className="border-l-4 border-purple-500 pl-4">
+                    <p className="font-mono text-sm bg-muted px-2 py-1 rounded">
+                      POST /prediction/temporal/
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Prédictions temporelles pour les 7 prochains jours
+                    </p>
+                  </div>
+                  
+                  <div className="border-l-4 border-orange-500 pl-4">
+                    <p className="font-mono text-sm bg-muted px-2 py-1 rounded">
+                      POST /prediction/mortalite/
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Calculer le taux de mortalité prévu
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Exemples concrets d'utilisation</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <h3 className="text-lg font-medium">Cas d'usage 1 : Prédiction simple</h3>
+                <div className="bg-muted p-3 rounded-md">
+                  <p className="text-sm">
+                    <strong>Situation :</strong> Un épidémiologiste veut savoir combien de lits d'hôpital 
+                    prévoir en France pour la semaine prochaine.
+                  </p>
+                  <p className="text-sm mt-2">
+                    <strong>Action :</strong> Il saisit les données actuelles (nouveaux cas, population, etc.) 
+                    dans le formulaire de prédiction d'hospitalisation.
+                  </p>
+                  <p className="text-sm mt-2">
+                    <strong>Résultat :</strong> Le modèle XGBoost spécialisé pour la France calcule 
+                    une estimation du nombre d'hospitalisations.
+                  </p>
+                </div>
+                
+                <h3 className="text-lg font-medium mt-4">Cas d'usage 2 : Analyse par lot</h3>
+                <div className="bg-muted p-3 rounded-md">
+                  <p className="text-sm">
+                    <strong>Situation :</strong> Une équipe de recherche a des données pour plusieurs 
+                    régions dans un fichier Excel.
+                  </p>
+                  <p className="text-sm mt-2">
+                    <strong>Action :</strong> Elle convertit son fichier en CSV et l'upload via 
+                    l'interface de téléchargement.
+                  </p>
+                  <p className="text-sm mt-2">
+                    <strong>Résultat :</strong> L'application traite toutes les lignes d'un coup 
+                    et retourne les prédictions pour chaque région.
+                  </p>
+                </div>
+                
+                <h3 className="text-lg font-medium mt-4">Cas d'usage 3 : Suivi temporel</h3>
+                <div className="bg-muted p-3 rounded-md">
+                  <p className="text-sm">
+                    <strong>Situation :</strong> Un responsable de santé publique veut voir l'évolution 
+                    probable sur les 7 prochains jours.
+                  </p>
+                  <p className="text-sm mt-2">
+                    <strong>Action :</strong> Il utilise la prédiction temporelle en fournissant 
+                    l'historique des 30 derniers jours.
+                  </p>
+                  <p className="text-sm mt-2">
+                    <strong>Résultat :</strong> Le modèle LSTM génère une courbe d'évolution 
+                    jour par jour pour la semaine suivante.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Gestion des erreurs et sécurité</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <h3 className="text-lg font-medium">Que se passe-t-il en cas de problème ?</h3>
+                
+                <div className="space-y-3">
+                  <div className="border border-yellow-200 bg-yellow-50 p-3 rounded-md">
+                    <h4 className="font-medium text-yellow-800">Modèle indisponible</h4>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Si le modèle IA ne peut pas être chargé, l'application utilise automatiquement 
+                      une simulation basée sur des moyennes historiques.
+                    </p>
+                  </div>
+                  
+                  <div className="border border-blue-200 bg-blue-50 p-3 rounded-md">
+                    <h4 className="font-medium text-blue-800">Données manquantes</h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      L'interface vérifie que toutes les données obligatoires sont présentes 
+                      avant d'envoyer la requête à l'IA.
+                    </p>
+                  </div>
+                  
+                  <div className="border border-red-200 bg-red-50 p-3 rounded-md">
+                    <h4 className="font-medium text-red-800">Erreur technique</h4>
+                    <p className="text-sm text-red-700 mt-1">
+                      En cas d'erreur technique, un message clair s'affiche à l'utilisateur 
+                      avec la possibilité de réessayer.
+                    </p>
+                  </div>
+                </div>
+                
+                <h3 className="text-lg font-medium mt-4">Sécurité des données</h3>
+                <ul className="list-disc pl-5 space-y-1 text-sm">
+                  <li>Toutes les communications entre le frontend et l'API sont chiffrées</li>
+                  <li>Les données ne sont pas stockées de manière permanente sur les serveurs</li>
+                  <li>Chaque requête est validée avant traitement</li>
+                  <li>Les modèles IA ne peuvent pas modifier ou accéder à d'autres données</li>
                 </ul>
               </CardContent>
             </Card>
