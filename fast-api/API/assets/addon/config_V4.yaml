@@ -1,0 +1,202 @@
+# Chemins des fichiers
+paths:
+  raw_data: "IA/usecases/pred_new_cas_temp_V4/data/raw/releves_selected_pays_final_AGGREGATED_updated.csv"
+  prepared_data_dir: "IA/usecases/pred_new_cas_temp_V4/data/prepared/"
+  models_dir: "IA/usecases/pred_new_cas_temp_V4/models/"
+  metrics_dir: "IA/usecases/pred_new_cas_temp_V4/metrics/"
+  figures_dir: "IA/usecases/pred_new_cas_temp_V4/figures/"
+  prepared_data: "IA/usecases/pred_new_cas_temp_V4/data/prepared/"
+
+# Sélection des pays et de la période
+data_selection:
+  single_country: "maroc"
+  countries:
+    - france
+    - allemagne
+    - etats-unis
+    - bresil
+    - maroc
+    - japon
+    - suisse
+    - russie
+    - italie
+    - indonesie
+    - colombie
+    - philippines
+  use_all_countries: false
+  date_range:
+    start: "2020-03-01"
+    end: "2022-08-31"
+
+# Split train / validation
+split:
+  train_size: 0.80 # proportion des données pour l’entraînement
+  shuffle: false # ne pas mélanger pour conserver l’ordre chronologique
+
+# Fenêtres temporelles pour la série
+forecasting:
+  input_window: 30 # nb de jours utilisés pour prédire
+  output_window: 7 # horizon de prédiction en jours
+
+# Features & target
+features:
+  input:
+    - nbNouveauCas
+    - nbDeces
+    - nbHospitalisation
+    - nbHospiSoinsIntensif
+    - nbTeste
+    - dow_sin
+    - dow_cos
+    - mon_sin
+    - mon_cos
+  lags:
+    - 1
+    - 7
+  target: nbNouveauCas # variable à prédire
+
+# Paramètres d’Optuna (optim. hyperparamètres)
+optuna:
+  study_name: "covid_forecast_study"
+  direction: "minimize" # minimiser la perte
+  n_trials: 50
+
+training:
+  patience: 10 # nombre d’époques sans amélioration avant arrêt
+  scheduler_patience: 5 # nombre d’époques sans amélioration avant baisse du LR
+
+# Algorithmes et recherche d’hyperparamètres
+models:
+  - name: "GRU"
+    use: true
+    hyperparameters:
+      learning_rate:
+        low: 0.0001
+        high: 0.01
+        log: true
+      hidden_size:
+        low: 16
+        high: 128
+      num_layers:
+        low: 1
+        high: 3
+      dropout:
+        low: 0.0
+        high: 0.5
+      batch_size:
+        values: [16, 32, 64]
+      epochs:
+        low: 10
+        high: 50
+
+  - name: "LSTM"
+    use: true
+    hyperparameters:
+      learning_rate:
+        low: 0.0001
+        high: 0.01
+        log: true
+      hidden_size:
+        low: 16
+        high: 128
+      num_layers:
+        low: 1
+        high: 3
+      dropout:
+        low: 0.0
+        high: 0.5
+      batch_size:
+        values: [16, 32, 64]
+      epochs:
+        low: 10
+        high: 50
+
+  - name: "RNN"
+    use: true
+    hyperparameters:
+      learning_rate:
+        low: 0.0001
+        high: 0.01
+        log: true
+      hidden_size:
+        low: 16
+        high: 128
+      num_layers:
+        low: 1
+        high: 3
+      dropout:
+        low: 0.0
+        high: 0.5
+      batch_size:
+        values: [16, 32, 64]
+      epochs:
+        low: 10
+        high: 50
+
+  - name: "TCNN"
+    use: true
+    hyperparameters:
+      learning_rate:
+        low: 0.0001
+        high: 0.01
+        log: true
+      batch_size:
+        low: 16
+        high: 64
+      epochs:
+        low: 10
+        high: 50
+
+  - name: "TransformerTS"
+    use: true
+    hyperparameters:
+      learning_rate:
+        low: 0.0001
+        high: 0.01
+        log: true
+      d_model:
+        low: 32
+        high: 128
+      n_heads:
+        low: 2
+        high: 8
+      num_layers:
+        low: 1
+        high: 3
+      dim_feedforward:
+        low: 64
+        high: 256
+      dropout:
+        low: 0.0
+        high: 0.5
+      batch_size:
+        values: [16, 32, 64]
+      epochs:
+        low: 10
+        high: 50
+
+  - name: "NBEATS"
+    use: true
+    hyperparameters:
+      learning_rate:
+        low: 0.0001
+        high: 0.01
+        log: true
+      batch_size:
+        values: [16, 32, 64]
+      epochs:
+        low: 10
+        high: 50
+
+      stack_types:
+        values: ["trend", "seasonality"]
+      nb_blocks_per_stack:
+        low: 1
+        high: 3
+      layer_width:
+        low: 64
+        high: 256
+
+# Divers
+random_seed: 42
+verbose: true
