@@ -1,0 +1,25 @@
+
+FROM grafana/grafana:latest
+
+# Set environment variables
+ENV GF_SECURITY_ADMIN_PASSWORD=admin
+ENV GF_USERS_ALLOW_SIGN_UP=false
+ENV GF_INSTALL_PLUGINS=grafana-worldmap-panel,grafana-piechart-panel
+
+# Copy custom configuration
+COPY docker/grafana/grafana.ini /etc/grafana/grafana.ini
+
+# Copy provisioning configuration
+COPY docker/grafana/provisioning/ /etc/grafana/provisioning/
+
+# Copy custom dashboards
+COPY docker/grafana/dashboards/ /var/lib/grafana/dashboards/
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
+
+USER grafana

@@ -97,6 +97,10 @@ API.add_middleware(
 # Initialize temporal prediction service
 temporal_predictor = TemporalPredictionService()
 
+# Ajout des imports pour les nouveaux services
+from .services.etl_service import etl_service
+from .services.technical_api import technical_api_service
+
 # ------------------ Dépendance DB ------------------
 def get_db():
     db = SessionLocal()
@@ -761,3 +765,7 @@ def read_variants_by_maladie(maladie_id: int, db: Session = Depends(get_db)):
 @API.get("/")
 def read_root():
     return {"status": "online", "message": "L'API fonctionne correctement"}
+
+# Ajout des routes ETL et API technique
+API.include_router(etl_service.router)
+API.include_router(technical_api_service.router)

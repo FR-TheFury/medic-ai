@@ -1,0 +1,145 @@
+
+version: '3.8'
+
+services:
+  # Frontend React/Vite
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "80:80"
+    environment:
+      - REACT_APP_API_URL=http://backend:8000
+      - REACT_APP_ETL_URL=http://etl:8001
+      - REACT_APP_TECHNICAL_URL=http://api-technique:8002
+    depends_on:
+      - backend
+    networks:
+      - us-network
+    restart: unless-stopped
+
+  # Backend API IA
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:@mysql:3306/dwh
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - ../fast-api/API/models:/app/API/models
+    networks:
+      - us-network
+    restart: unless-stopped
+
+  # Base de données MySQL
+  mysql:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=dwh
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../docker/mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - us-network
+    restart: unless-stopped
+
+  # Service ETL
+  etl:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.etl
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:@mysql:3306/dwh
+    depends_on:
+      - mysql
+    networks:
+      - us-network
+    restart: unless-stopped
+
+  # API Technique (États-Unis uniquement)
+  api-technique:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api-technique
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:@mysql:3306/dwh
+    depends_on:
+      - mysql
+    networks:
+      - us-network
+    restart: unless-stopped
+
+  # DataViz Grafana
+  dataviz:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dataviz
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_DATABASE_TYPE=mysql
+      - GF_DATABASE_HOST=mysql:3306
+      - GF_DATABASE_NAME=dwh
+      - GF_DATABASE_USER=root
+      - GF_DATABASE_PASSWORD=
+    depends_on:
+      - mysql
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - us-network
+    restart: unless-stopped
+
+  # Redis pour cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - us-network
+    restart: unless-stopped
+
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx/us.conf:/etc/nginx/conf.d/default.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - us-network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  grafana_data:
+  redis_data:
+
+networks:
+  us-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
