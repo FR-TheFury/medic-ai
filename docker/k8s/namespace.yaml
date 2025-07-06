@@ -1,0 +1,145 @@
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mspr3-health-platform
+  labels:
+    name: mspr3-health-platform
+    environment: production
+    project: mspr3
+    version: "3.0"
+  annotations:
+    description: "MSPR3 Multi-Country Health Platform"
+    contact: "devops@mspr3-health.org"
+    documentation: "https://docs.mspr3-health.org"
+---
+# Resource Quotas pour limiter les ressources par namespace
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: mspr3-resource-quota
+  namespace: mspr3-health-platform
+spec:
+  hard:
+    # Limites de ressources CPU et mémoire
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    
+    # Limites sur les objets Kubernetes
+    pods: "20"
+    services: "10"
+    persistentvolumeclaims: "6"
+    secrets: "10"
+    configmaps: "10"
+    
+    # Limites de stockage
+    requests.storage: 50Gi
+---
+# Network Policy pour la sécurité réseau
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mspr3-network-policy
+  namespace: mspr3-health-platform
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  # Règles d'entrée
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: mspr3-health-platform
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: mspr3-health-platform
+  
+  # Règles de sortie
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: mspr3-health-platform
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+---
+# Service Account pour les applications
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mspr3-app-service-account
+  namespace: mspr3-health-platform
+  labels:
+    app.kubernetes.io/name: mspr3-service-account
+    app.kubernetes.io/part-of: mspr3-health-platform
+automountServiceAccountToken: true
+---
+# Cluster Role pour les permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mspr3-app-cluster-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+---
+# Cluster Role Binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mspr3-app-cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: mspr3-app-cluster-role
+subjects:
+- kind: ServiceAccount
+  name: mspr3-app-service-account
+  namespace: mspr3-health-platform
+---
+# Priority Class pour les applications critiques
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: mspr3-high-priority
+value: 1000
+globalDefault: false
+description: "High priority class for MSPR3 critical services"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: mspr3-medium-priority
+value: 500
+globalDefault: false
+description: "Medium priority class for MSPR3 standard services"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: mspr3-low-priority
+value: 100
+globalDefault: true
+description: "Low priority class for MSPR3 background services"

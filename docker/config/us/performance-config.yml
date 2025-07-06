@@ -1,0 +1,317 @@
+
+# Configuration Performance pour les États-Unis
+# Optimisations spécifiques pour gérer de grandes quantités de données
+
+version: '3.8'
+
+# Variables d'environnement pour la performance US
+environment:
+  # Configuration base
+  COUNTRY: "us"
+  DEPLOYMENT_REGION: "us-east-1"
+  
+  # Configuration haute performance
+  ENABLE_HIGH_PERFORMANCE: "true"
+  MAX_WORKERS: "8"
+  WORKER_TIMEOUT: "300"
+  
+  # Configuration base de données
+  DB_POOL_SIZE: "20"
+  DB_MAX_OVERFLOW: "30"
+  DB_POOL_TIMEOUT: "30"
+  DB_POOL_RECYCLE: "3600"
+  
+  # Configuration Redis
+  REDIS_MAX_CONNECTIONS: "100"
+  REDIS_CONNECTION_POOL_SIZE: "50"
+  REDIS_SOCKET_TIMEOUT: "30"
+  
+  # Configuration API
+  API_RATE_LIMIT: "1000/minute"
+  API_BURST_LIMIT: "2000"
+  API_TIMEOUT: "60"
+  
+  # Configuration ETL
+  ETL_BATCH_SIZE: "10000"
+  ETL_PARALLEL_JOBS: "4"
+  ETL_MEMORY_BUFFER: "512MB"
+  
+  # Configuration monitoring
+  METRICS_ENABLED: "true"
+  PROMETHEUS_PORT: "9090"
+  GRAFANA_ENABLED: "true"
+  
+  # Configuration logging
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  LOG_RETENTION_DAYS: "30"
+
+# Configuration spécifique MySQL pour haute performance
+mysql_performance:
+  environment:
+    # InnoDB Configuration
+    MYSQL_INNODB_BUFFER_POOL_SIZE: "2G"
+    MYSQL_INNODB_LOG_FILE_SIZE: "512M"
+    MYSQL_INNODB_LOG_BUFFER_SIZE: "32M"
+    MYSQL_INNODB_FLUSH_LOG_AT_TRX_COMMIT: "2"
+    MYSQL_INNODB_FLUSH_METHOD: "O_DIRECT"
+    
+    # Connection Configuration
+    MYSQL_MAX_CONNECTIONS: "500"
+    MYSQL_MAX_CONNECT_ERRORS: "100000"
+    MYSQL_CONNECT_TIMEOUT: "60"
+    MYSQL_WAIT_TIMEOUT: "28800"
+    
+    # Query Cache
+    MYSQL_QUERY_CACHE_SIZE: "256M"
+    MYSQL_QUERY_CACHE_TYPE: "1"
+    MYSQL_QUERY_CACHE_LIMIT: "4M"
+    
+    # Thread Configuration
+    MYSQL_THREAD_CACHE_SIZE: "50"
+    MYSQL_THREAD_STACK: "256K"
+    
+    # Buffer Configuration
+    MYSQL_KEY_BUFFER_SIZE: "256M"
+    MYSQL_SORT_BUFFER_SIZE: "4M"
+    MYSQL_READ_BUFFER_SIZE: "2M"
+    MYSQL_READ_RND_BUFFER_SIZE: "8M"
+    MYSQL_MYISAM_SORT_BUFFER_SIZE: "128M"
+    
+    # Binary Logging
+    MYSQL_LOG_BIN: "mysql-bin"
+    MYSQL_BINLOG_FORMAT: "ROW"
+    MYSQL_EXPIRE_LOGS_DAYS: "7"
+    MYSQL_MAX_BINLOG_SIZE: "100M"
+
+# Configuration Redis pour haute performance
+redis_performance:
+  environment:
+    # Memory Configuration
+    REDIS_MAXMEMORY: "1gb"
+    REDIS_MAXMEMORY_POLICY: "allkeys-lru"
+    REDIS_MAXMEMORY_SAMPLES: "10"
+    
+    # Persistence Configuration
+    REDIS_SAVE: "900 1 300 10 60 10000"
+    REDIS_RDBCOMPRESSION: "yes"
+    REDIS_RDBCHECKSUM: "yes"
+    
+    # Network Configuration
+    REDIS_TCP_KEEPALIVE: "300"
+    REDIS_TCP_BACKLOG: "511"
+    REDIS_TIMEOUT: "0"
+    
+    # Performance Tuning
+    REDIS_HZ: "10"
+    REDIS_DYNAMIC_HZ: "yes"
+    REDIS_LATENCY_MONITOR_THRESHOLD: "100"
+
+# Configuration spécifique Backend API
+backend_performance:
+  environment:
+    # Uvicorn Configuration
+    UVICORN_WORKERS: "8"
+    UVICORN_WORKER_CLASS: "uvicorn.workers.UvicornWorker"
+    UVICORN_MAX_REQUESTS: "10000"
+    UVICORN_MAX_REQUESTS_JITTER: "1000"
+    UVICORN_TIMEOUT_KEEP_ALIVE: "65"
+    
+    # FastAPI Configuration
+    FASTAPI_DEBUG: "false"
+    FASTAPI_DOCS_URL: "/docs"
+    FASTAPI_REDOC_URL: "/redoc"
+    
+    # Performance Features
+    ENABLE_GZIP: "true"
+    ENABLE_CORS: "true"
+    ENABLE_CACHING: "true"
+    CACHE_TTL: "3600"
+    
+    # Database Connection Pool
+    DB_ECHO: "false"
+    DB_POOL_PRE_PING: "true"
+    DB_AUTOFLUSH: "false"
+    DB_AUTOCOMMIT: "false"
+    
+    # AI Model Configuration
+    MODEL_CACHE_SIZE: "10"
+    MODEL_PREDICTION_TIMEOUT: "30"
+    ENABLE_MODEL_PARALLEL: "true"
+
+# Configuration monitoring avancé
+monitoring_config:
+  prometheus:
+    scrape_interval: "15s"
+    evaluation_interval: "15s"
+    retention: "15d"
+    
+  grafana:
+    dashboards:
+      - name: "US Performance Dashboard"
+        path: "/var/lib/grafana/dashboards/us-performance.json"
+      - name: "API Metrics Dashboard"
+        path: "/var/lib/grafana/dashboards/api-metrics.json"
+      - name: "Database Performance"
+        path: "/var/lib/grafana/dashboards/db-performance.json"
+    
+    alerts:
+      - name: "High CPU Usage"
+        condition: "cpu_usage > 80"
+        for: "5m"
+      - name: "High Memory Usage"
+        condition: "memory_usage > 85"
+        for: "5m"
+      - name: "Database Slow Queries"
+        condition: "mysql_slow_queries_rate > 10"
+        for: "2m"
+      - name: "API Response Time"
+        condition: "api_response_time_95th > 2000"
+        for: "1m"
+
+# Configuration load balancing (Nginx)
+load_balancer:
+  upstream_servers:
+    - "backend:8000 weight=3 max_fails=3 fail_timeout=30s"
+    - "backend:8000 weight=3 max_fails=3 fail_timeout=30s"
+    - "backend:8000 weight=3 max_fails=3 fail_timeout=30s"
+  
+  keepalive: "32"
+  keepalive_requests: "100"
+  keepalive_timeout: "60s"
+  
+  proxy_settings:
+    proxy_connect_timeout: "60s"
+    proxy_send_timeout: "60s"
+    proxy_read_timeout: "60s"
+    proxy_buffer_size: "4k"
+    proxy_buffers: "8 4k"
+    proxy_busy_buffers_size: "8k"
+
+# Configuration sécurité haute performance
+security_config:
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 1000
+    burst: 2000
+    delay: "nodelay"
+  
+  ssl_optimization:
+    ssl_session_cache: "shared:SSL:10m"
+    ssl_session_timeout: "10m"
+    ssl_protocols: "TLSv1.2 TLSv1.3"
+    ssl_ciphers: "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384"
+    ssl_prefer_server_ciphers: "off"
+  
+  headers:
+    add_header:
+      - "X-Frame-Options SAMEORIGIN always"
+      - "X-Content-Type-Options nosniff always"
+      - "X-XSS-Protection '1; mode=block' always"
+      - "Strict-Transport-Security 'max-age=31536000; includeSubDomains' always"
+
+# Configuration backup haute fréquence
+backup_config:
+  frequency: "every 4 hours"
+  retention: "7 days"
+  compression: "gzip"
+  encryption: "aes256"
+  
+  destinations:
+    - type: "local"
+      path: "/var/backups/mysql/us"
+    - type: "s3"
+      bucket: "mspr3-backups-us"
+      region: "us-east-1"
+    - type: "remote"
+      host: "backup-server-us.mspr3.com"
+      path: "/backups/mspr3/us"
+
+# Configuration alerting
+alerting:
+  channels:
+    - name: "slack-us-team"
+      type: "slack"
+      webhook: "${SLACK_WEBHOOK_US}"
+    - name: "email-ops"
+      type: "email"
+      recipients: ["ops-us@mspr3.com", "devops@mspr3.com"]
+    - name: "pagerduty-critical"
+      type: "pagerduty"
+      integration_key: "${PAGERDUTY_KEY_US}"
+  
+  rules:
+    critical:
+      - "Service Down"
+      - "Database Connection Failed"
+      - "High Error Rate (>5%)"
+    warning:
+      - "High Response Time (>2s)"
+      - "Memory Usage >85%"
+      - "Disk Space <20%"
+    info:
+      - "Deployment Started"
+      - "Backup Completed"
+      - "Scale Event"
+
+# Configuration auto-scaling
+autoscaling:
+  enabled: true
+  
+  backend:
+    min_replicas: 3
+    max_replicas: 10
+    target_cpu: 70
+    target_memory: 80
+    scale_up_stabilization: "60s"
+    scale_down_stabilization: "300s"
+  
+  etl:
+    min_replicas: 2
+    max_replicas: 6
+    target_cpu: 80
+    target_memory: 85
+  
+  redis:
+    enabled: false  # Redis ne supporte pas l'auto-scaling natif
+  
+  mysql:
+    enabled: false  # MySQL nécessite une approche différente
+
+# Configuration cache distribué
+distributed_cache:
+  enabled: true
+  
+  redis_cluster:
+    nodes:
+      - "redis-1:6379"
+      - "redis-2:6379"
+      - "redis-3:6379"
+    
+    configuration:
+      cluster_enabled: "yes"
+      cluster_config_file: "nodes.conf"
+      cluster_node_timeout: "5000"
+      appendonly: "yes"
+      appendfsync: "everysec"
+
+# Métriques business spécifiques US
+business_metrics:
+  enabled: true
+  
+  kpis:
+    - name: "predictions_per_minute"
+      description: "Nombre de prédictions IA par minute"
+      target: "> 100"
+    
+    - name: "data_processing_lag"
+      description: "Retard dans le traitement des données OMS"
+      target: "< 5 minutes"
+    
+    - name: "user_satisfaction_score"
+      description: "Score de satisfaction utilisateur"
+      target: "> 4.5/5"
+    
+    - name: "api_availability"
+      description: "Disponibilité de l'API"
+      target: "> 99.9%"

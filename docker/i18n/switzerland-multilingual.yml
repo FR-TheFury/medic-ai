@@ -1,0 +1,553 @@
+
+# Configuration Multilingue pour la Suisse
+# Support des langues officielles: Français, Allemand, Italien
+
+version: '3.8'
+
+# Configuration générale multilingue
+i18n_config:
+  default_language: "fr"
+  supported_languages: ["fr", "de", "it"]
+  fallback_language: "fr"
+  
+  # Configuration par région suisse
+  regional_languages:
+    - region: "geneva"
+      primary: "fr"
+      secondary: ["de", "it"]
+    - region: "zurich"
+      primary: "de"
+      secondary: ["fr", "it"]
+    - region: "ticino"
+      primary: "it"
+      secondary: ["fr", "de"]
+    - region: "bern"
+      primary: "de"
+      secondary: ["fr", "it"]
+    - region: "basel"
+      primary: "de"
+      secondary: ["fr", "it"]
+
+# Variables d'environnement pour la Suisse
+environment:
+  # Configuration base
+  COUNTRY: "ch"
+  DEPLOYMENT_REGION: "eu-central-1"  # Zurich
+  
+  # Configuration multilingue
+  I18N_ENABLED: "true"
+  SUPPORTED_LOCALES: "fr_CH,de_CH,it_CH"
+  DEFAULT_LOCALE: "fr_CH"
+  
+  # Configuration frontend
+  REACT_APP_I18N_ENABLED: "true"
+  REACT_APP_SUPPORTED_LANGUAGES: "fr,de,it"
+  REACT_APP_DEFAULT_LANGUAGE: "fr"
+  
+  # Configuration backend
+  API_MULTILINGUAL: "true"
+  API_ERROR_MESSAGES_I18N: "true"
+  
+  # Configuration base de données
+  DB_CHARSET: "utf8mb4"
+  DB_COLLATION: "utf8mb4_unicode_ci"
+  
+  # Configuration simplifiée (pas de DataViz, pas d'API technique)
+  ENABLE_DATAVIZ: "false"
+  ENABLE_TECHNICAL_API: "false"
+  ENABLE_MINIMAL_CONFIG: "true"
+
+# Dictionnaires de traduction
+translations:
+  # Interface utilisateur générale
+  ui_common:
+    fr:
+      title: "Plateforme de Santé MSPR3"
+      welcome: "Bienvenue"
+      login: "Connexion"
+      logout: "Déconnexion"
+      dashboard: "Tableau de bord"
+      settings: "Paramètres"
+      profile: "Profil"
+      help: "Aide"
+      loading: "Chargement..."
+      error: "Erreur"
+      success: "Succès"
+      cancel: "Annuler"
+      save: "Enregistrer"
+      delete: "Supprimer"
+      edit: "Modifier"
+      search: "Rechercher"
+      filter: "Filtrer"
+      export: "Exporter"
+      import: "Importer"
+      
+    de:
+      title: "MSPR3 Gesundheitsplattform"
+      welcome: "Willkommen"
+      login: "Anmeldung"
+      logout: "Abmeldung"
+      dashboard: "Dashboard"
+      settings: "Einstellungen"
+      profile: "Profil"
+      help: "Hilfe"
+      loading: "Laden..."
+      error: "Fehler"
+      success: "Erfolg"
+      cancel: "Abbrechen"
+      save: "Speichern"
+      delete: "Löschen"
+      edit: "Bearbeiten"
+      search: "Suchen"
+      filter: "Filtern"
+      export: "Exportieren"
+      import: "Importieren"
+      
+    it:
+      title: "Piattaforma Sanitaria MSPR3"
+      welcome: "Benvenuto"
+      login: "Accesso"
+      logout: "Disconnessione"
+      dashboard: "Cruscotto"
+      settings: "Impostazioni"
+      profile: "Profilo"
+      help: "Aiuto"
+      loading: "Caricamento..."
+      error: "Errore"
+      success: "Successo"
+      cancel: "Annulla"
+      save: "Salva"
+      delete: "Elimina"
+      edit: "Modifica"
+      search: "Cerca"
+      filter: "Filtra"
+      export: "Esporta"
+      import: "Importa"
+
+  # Terminologie médicale
+  medical_terms:
+    fr:
+      disease: "Maladie"
+      diseases: "Maladies"
+      symptom: "Symptôme"
+      symptoms: "Symptômes"
+      diagnosis: "Diagnostic"
+      treatment: "Traitement"
+      patient: "Patient"
+      patients: "Patients"
+      doctor: "Médecin"
+      hospital: "Hôpital"
+      hospitalization: "Hospitalisation"
+      death: "Décès"
+      recovery: "Guérison"
+      epidemic: "Épidémie"
+      pandemic: "Pandémie"
+      vaccination: "Vaccination"
+      prevention: "Prévention"
+      mortality_rate: "Taux de mortalité"
+      incidence_rate: "Taux d'incidence"
+      new_cases: "Nouveaux cas"
+      
+    de:
+      disease: "Krankheit"
+      diseases: "Krankheiten"
+      symptom: "Symptom"
+      symptoms: "Symptome"
+      diagnosis: "Diagnose"
+      treatment: "Behandlung"
+      patient: "Patient"
+      patients: "Patienten"
+      doctor: "Arzt"
+      hospital: "Krankenhaus"
+      hospitalization: "Hospitalisierung"
+      death: "Tod"
+      recovery: "Genesung"
+      epidemic: "Epidemie"
+      pandemic: "Pandemie"
+      vaccination: "Impfung"
+      prevention: "Prävention"
+      mortality_rate: "Sterblichkeitsrate"
+      incidence_rate: "Inzidenzrate"
+      new_cases: "Neue Fälle"
+      
+    it:
+      disease: "Malattia"
+      diseases: "Malattie"
+      symptom: "Sintomo"
+      symptoms: "Sintomi"
+      diagnosis: "Diagnosi"
+      treatment: "Trattamento"
+      patient: "Paziente"
+      patients: "Pazienti"
+      doctor: "Medico"
+      hospital: "Ospedale"
+      hospitalization: "Ospedalizzazione"
+      death: "Morte"
+      recovery: "Guarigione"
+      epidemic: "Epidemia"
+      pandemic: "Pandemia"
+      vaccination: "Vaccinazione"
+      prevention: "Prevenzione"
+      mortality_rate: "Tasso di mortalità"
+      incidence_rate: "Tasso di incidenza"
+      new_cases: "Nuovi casi"
+
+  # Navigation et menus
+  navigation:
+    fr:
+      home: "Accueil"
+      dashboard: "Tableau de bord"
+      diseases: "Maladies"
+      countries: "Pays"
+      regions: "Régions"
+      reports: "Rapports"
+      statistics: "Statistiques"
+      predictions: "Prédictions"
+      alerts: "Alertes"
+      administration: "Administration"
+      
+    de:
+      home: "Startseite"
+      dashboard: "Dashboard"
+      diseases: "Krankheiten"
+      countries: "Länder"
+      regions: "Regionen"
+      reports: "Berichte"
+      statistics: "Statistiken"
+      predictions: "Vorhersagen"
+      alerts: "Warnungen"
+      administration: "Verwaltung"
+      
+    it:
+      home: "Home"
+      dashboard: "Cruscotto"
+      diseases: "Malattie"
+      countries: "Paesi"
+      regions: "Regioni"
+      reports: "Rapporti"
+      statistics: "Statistiche"
+      predictions: "Previsioni"
+      alerts: "Avvisi"
+      administration: "Amministrazione"
+
+  # Messages d'erreur
+  errors:
+    fr:
+      not_found: "Page non trouvée"
+      server_error: "Erreur serveur"
+      network_error: "Erreur réseau"
+      validation_error: "Erreur de validation"
+      authentication_required: "Authentification requise"
+      access_denied: "Accès refusé"
+      invalid_data: "Données invalides"
+      connection_failed: "Connexion échouée"
+      timeout: "Délai d'attente dépassé"
+      
+    de:
+      not_found: "Seite nicht gefunden"
+      server_error: "Serverfehler"
+      network_error: "Netzwerkfehler"
+      validation_error: "Validierungsfehler"
+      authentication_required: "Authentifizierung erforderlich"
+      access_denied: "Zugriff verweigert"
+      invalid_data: "Ungültige Daten"
+      connection_failed: "Verbindung fehlgeschlagen"
+      timeout: "Zeitüberschreitung"
+      
+    it:
+      not_found: "Pagina non trovata"
+      server_error: "Errore del server"
+      network_error: "Errore di rete"
+      validation_error: "Errore di validazione"
+      authentication_required: "Autenticazione richiesta"
+      access_denied: "Accesso negato"
+      invalid_data: "Dati non validi"
+      connection_failed: "Connessione fallita"
+      timeout: "Timeout"
+
+  # Formulaires
+  forms:
+    fr:
+      first_name: "Prénom"
+      last_name: "Nom"
+      email: "Email"
+      password: "Mot de passe"
+      confirm_password: "Confirmer le mot de passe"
+      phone: "Téléphone"
+      address: "Adresse"
+      city: "Ville"
+      postal_code: "Code postal"
+      country: "Pays"
+      language: "Langue"
+      required_field: "Champ obligatoire"
+      optional_field: "Champ optionnel"
+      
+    de:
+      first_name: "Vorname"
+      last_name: "Nachname"
+      email: "E-Mail"
+      password: "Passwort"
+      confirm_password: "Passwort bestätigen"
+      phone: "Telefon"
+      address: "Adresse"
+      city: "Stadt"
+      postal_code: "Postleitzahl"
+      country: "Land"
+      language: "Sprache"
+      required_field: "Pflichtfeld"
+      optional_field: "Optionales Feld"
+      
+    it:
+      first_name: "Nome"
+      last_name: "Cognome"
+      email: "Email"
+      password: "Password"
+      confirm_password: "Conferma password"
+      phone: "Telefono"
+      address: "Indirizzo"
+      city: "Città"
+      postal_code: "Codice postale"
+      country: "Paese"
+      language: "Lingua"
+      required_field: "Campo obbligatorio"
+      optional_field: "Campo opzionale"
+
+# Configuration des formats locaux
+localization:
+  date_formats:
+    fr_CH: "DD.MM.YYYY"
+    de_CH: "DD.MM.YYYY"
+    it_CH: "DD.MM.YYYY"
+  
+  time_formats:
+    fr_CH: "HH:mm:ss"
+    de_CH: "HH:mm:ss"
+    it_CH: "HH:mm:ss"
+  
+  number_formats:
+    fr_CH:
+      decimal_separator: ","
+      thousands_separator: "'"
+      currency: "CHF"
+    de_CH:
+      decimal_separator: ","
+      thousands_separator: "'"
+      currency: "CHF"
+    it_CH:
+      decimal_separator: ","
+      thousands_separator: "'"
+      currency: "CHF"
+
+# Configuration de détection automatique de langue
+language_detection:
+  enabled: true
+  
+  detection_methods:
+    - "browser_language"     # Langue du navigateur
+    - "geolocation"         # Géolocalisation
+    - "user_preference"     # Préférence utilisateur sauvée
+    - "url_parameter"       # Paramètre URL (?lang=de)
+    - "subdomain"          # Sous-domaine (de.mspr3.ch)
+  
+  browser_language_mapping:
+    "fr": "fr"
+    "fr-CH": "fr"
+    "fr-FR": "fr"
+    "de": "de"
+    "de-CH": "de"
+    "de-DE": "de"
+    "it": "it"
+    "it-CH": "it"
+    "it-IT": "it"
+    "en": "fr"  # Fallback vers français pour anglais
+  
+  geolocation_mapping:
+    cantons:
+      # Cantons francophones
+      - names: ["Geneva", "Vaud", "Neuchâtel", "Jura", "Fribourg"]
+        language: "fr"
+      
+      # Cantons germanophones
+      - names: ["Zurich", "Bern", "Basel", "Aargau", "Sankt Gallen", "Luzern"]
+        language: "de"
+      
+      # Canton italophone
+      - names: ["Ticino"]
+        language: "it"
+      
+      # Cantons multilingues (default français)
+      - names: ["Valais", "Graubünden"]
+        language: "fr"
+
+# Configuration API multilingue
+api_i18n:
+  enabled: true
+  
+  # Headers HTTP supportés
+  headers:
+    accept_language: true
+    content_language: true
+    custom_language_header: "X-Language"
+  
+  # Réponses d'erreur multilingues
+  error_responses:
+    enabled: true
+    include_original_message: true
+    fallback_language: "fr"
+  
+  # Documentation API multilingue
+  documentation:
+    swagger_ui_languages: ["fr", "de", "it"]
+    api_descriptions: true
+    parameter_descriptions: true
+
+# Configuration frontend React
+frontend_i18n:
+  library: "react-i18next"
+  
+  configuration:
+    debug: false
+    fallback_lng: "fr"
+    interpolation:
+      escapeValue: false
+    
+    detection:
+      order: ["localStorage", "navigator", "querystring"]
+      cache: ["localStorage"]
+    
+    resources_path: "/locales/{{lng}}/{{ns}}.json"
+    
+    namespaces:
+      - "common"
+      - "navigation"
+      - "forms"
+      - "medical"
+      - "errors"
+      - "dashboard"
+
+# Configuration base de données multilingue
+database_i18n:
+  # Tables de traduction
+  translation_tables:
+    - table: "diseases_i18n"
+      columns:
+        - "disease_id"
+        - "language_code"
+        - "name"
+        - "description"
+        - "symptoms"
+        - "prevention"
+    
+    - table: "countries_i18n"
+      columns:
+        - "country_id"
+        - "language_code"
+        - "name"
+        - "description"
+    
+    - table: "regions_i18n"
+      columns:
+        - "region_id"
+        - "language_code"
+        - "name"
+        - "description"
+  
+  # Index pour les performances
+  indexes:
+    - "CREATE INDEX idx_diseases_i18n_lang ON diseases_i18n(language_code, disease_id)"
+    - "CREATE INDEX idx_countries_i18n_lang ON countries_i18n(language_code, country_id)"
+    - "CREATE INDEX idx_regions_i18n_lang ON regions_i18n(language_code, region_id)"
+
+# Configuration de validation multilingue
+validation_i18n:
+  enabled: true
+  
+  # Messages de validation par langue
+  messages:
+    fr:
+      required: "Ce champ est obligatoire"
+      email: "Adresse email invalide"
+      min_length: "Minimum {{min}} caractères"
+      max_length: "Maximum {{max}} caractères"
+      pattern: "Format invalide"
+      
+    de:
+      required: "Dieses Feld ist erforderlich"
+      email: "Ungültige E-Mail-Adresse"
+      min_length: "Mindestens {{min}} Zeichen"
+      max_length: "Höchstens {{max}} Zeichen"
+      pattern: "Ungültiges Format"
+      
+    it:
+      required: "Questo campo è obbligatorio"
+      email: "Indirizzo email non valido"
+      min_length: "Minimo {{min}} caratteri"
+      max_length: "Massimo {{max}} caratteri"
+      pattern: "Formato non valido"
+
+# Configuration monitoring multilingue
+monitoring_i18n:
+  enabled: true
+  
+  # Métriques par langue
+  metrics:
+    - name: "language_usage"
+      description: "Utilisation des langues par utilisateur"
+      labels: ["language", "country", "region"]
+    
+    - name: "translation_coverage"
+      description: "Couverture des traductions"
+      labels: ["namespace", "language"]
+    
+    - name: "language_switch_frequency"
+      description: "Fréquence de changement de langue"
+      labels: ["from_language", "to_language"]
+  
+  # Alertes spécifiques
+  alerts:
+    - name: "Missing Translations"
+      condition: "translation_coverage < 95%"
+      severity: "warning"
+    
+    - name: "Language Detection Failed"
+      condition: "language_detection_failures > 5%"
+      severity: "warning"
+
+# Configuration de test multilingue
+testing_i18n:
+  enabled: true
+  
+  # Tests automatisés
+  automated_tests:
+    - "translation_completeness"
+    - "ui_layout_integrity"
+    - "api_response_languages"
+    - "database_i18n_consistency"
+  
+  # Tests manuels
+  manual_tests:
+    - "user_experience_per_language"
+    - "cultural_appropriateness"
+    - "medical_terminology_accuracy"
+    - "swiss_specific_terminology"
+
+# Métriques spécifiques Suisse
+swiss_metrics:
+  enabled: true
+  
+  kpis:
+    - name: "multilingual_usage"
+      description: "Répartition d'usage des langues"
+      target: "FR: 60%, DE: 30%, IT: 10%"
+    
+    - name: "translation_accuracy"
+      description: "Précision des traductions médicales"
+      target: "> 98%"
+    
+    - name: "language_switch_success"
+      description: "Succès du changement de langue"
+      target: "> 99%"
+    
+    - name: "regional_adoption"
+      description: "Adoption par région linguistique"
+      target: "Équitable entre toutes les régions"

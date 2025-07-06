@@ -1,0 +1,477 @@
+
+# Configuration RGPD pour la France
+# Conformité stricte au Règlement Général sur la Protection des Données
+
+version: '3.8'
+
+# Variables d'environnement pour la conformité RGPD
+environment:
+  # Configuration base
+  COUNTRY: "fr"
+  DEPLOYMENT_REGION: "eu-west-3"  # Paris
+  
+  # Configuration RGPD
+  GDPR_ENABLED: "true"
+  GDPR_COMPLIANCE_LEVEL: "strict"
+  DATA_RESIDENCY: "EU"
+  
+  # Configuration chiffrement
+  ENCRYPTION_AT_REST: "true"
+  ENCRYPTION_IN_TRANSIT: "true"
+  ENCRYPTION_ALGORITHM: "AES-256-GCM"
+  KEY_ROTATION_DAYS: "90"
+  
+  # Configuration audit
+  AUDIT_LOGGING: "true"
+  AUDIT_RETENTION_DAYS: "2555"  # 7 ans (obligation légale)
+  AUDIT_ENCRYPTION: "true"
+  
+  # Configuration consentement
+  CONSENT_MANAGEMENT: "true"
+  CONSENT_TRACKING: "true"
+  CONSENT_EXPIRY_DAYS: "365"
+  
+  # Configuration anonymisation
+  DATA_ANONYMIZATION: "true"
+  PSEUDONYMIZATION: "true"
+  DATA_MINIMIZATION: "true"
+  
+  # Configuration droit des utilisateurs
+  RIGHT_TO_ACCESS: "true"
+  RIGHT_TO_RECTIFICATION: "true"
+  RIGHT_TO_ERASURE: "true"  # Droit à l'oubli
+  RIGHT_TO_PORTABILITY: "true"
+  RIGHT_TO_RESTRICTION: "true"
+  
+  # Configuration notification
+  BREACH_NOTIFICATION: "true"
+  BREACH_NOTIFICATION_DELAY: "72"  # heures
+  DPO_EMAIL: "dpo@mspr3-health.fr"
+  
+  # Configuration logging sécurisé
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  LOG_PSEUDONYMIZATION: "true"
+  LOG_RETENTION_DAYS: "365"
+
+# Configuration MySQL avec chiffrement RGPD
+mysql_gdpr:
+  environment:
+    # Chiffrement de la base de données
+    MYSQL_ENCRYPT: "FORCE"
+    MYSQL_SSL_CA: "/etc/mysql/ssl/ca.pem"
+    MYSQL_SSL_CERT: "/etc/mysql/ssl/server-cert.pem"
+    MYSQL_SSL_KEY: "/etc/mysql/ssl/server-key.pem"
+    
+    # Configuration InnoDB avec chiffrement
+    MYSQL_INNODB_ENCRYPT_TABLES: "ON"
+    MYSQL_INNODB_ENCRYPT_LOGS: "ON"
+    MYSQL_INNODB_ENCRYPT_TEMP_FILES: "ON"
+    
+    # Configuration audit
+    MYSQL_AUDIT_LOG_POLICY: "ALL"
+    MYSQL_AUDIT_LOG_CONNECTION_POLICY: "ALL"
+    MYSQL_AUDIT_LOG_STATEMENT_POLICY: "ALL"
+    MYSQL_AUDIT_LOG_FORMAT: "JSON"
+    MYSQL_AUDIT_LOG_FILE: "/var/log/mysql/audit.log"
+    MYSQL_AUDIT_LOG_ROTATE_ON_SIZE: "100M"
+    MYSQL_AUDIT_LOG_ROTATIONS: "10"
+    
+    # Gestion des mots de passe
+    MYSQL_VALIDATE_PASSWORD_POLICY: "STRONG"
+    MYSQL_DEFAULT_PASSWORD_LIFETIME: "90"
+    MYSQL_PASSWORD_HISTORY: "5"
+    MYSQL_PASSWORD_REUSE_INTERVAL: "365"
+    
+    # Configuration sécurisée
+    MYSQL_LOCAL_INFILE: "OFF"
+    MYSQL_SKIP_SHOW_DATABASE: "ON"
+    MYSQL_SAFE_USER_CREATE: "ON"
+    MYSQL_SECURE_AUTH: "ON"
+
+# Configuration backend avec RGPD
+backend_gdpr:
+  environment:
+    # Configuration chiffrement
+    CRYPTO_KEY: "${GDPR_CRYPTO_KEY}"
+    FIELD_ENCRYPTION: "true"
+    PII_ENCRYPTION: "true"
+    
+    # Configuration session
+    SESSION_SECURE: "true"
+    SESSION_HTTPONLY: "true"
+    SESSION_SAMESITE: "Strict"
+    SESSION_TIMEOUT: "1800"  # 30 minutes
+    
+    # Configuration cookies
+    COOKIE_SECURE: "true"
+    COOKIE_HTTPONLY: "true"
+    COOKIE_SAMESITE: "Strict"
+    COOKIE_CONSENT_REQUIRED: "true"
+    
+    # Configuration APIs RGPD
+    GDPR_API_ENABLED: "true"
+    DATA_EXPORT_FORMAT: "JSON,CSV,XML"
+    DATA_ANONYMIZATION_API: "true"
+    
+    # Configuration headers de sécurité
+    HSTS_ENABLED: "true"
+    CSP_ENABLED: "true"
+    REFERRER_POLICY: "strict-origin-when-cross-origin"
+    
+    # Rate limiting renforcé
+    RATE_LIMIT_ENABLED: "true"
+    RATE_LIMIT_PER_MINUTE: "60"
+    RATE_LIMIT_BURST: "120"
+
+# Configuration des données personnelles
+personal_data:
+  categories:
+    # Catégories de données avec niveaux de protection
+    - name: "identity"
+      description: "Données d'identité"
+      fields: ["nom", "prenom", "email", "telephone"]
+      protection_level: "high"
+      retention_days: 2555  # 7 ans
+      encryption_required: true
+      audit_required: true
+    
+    - name: "health"
+      description: "Données de santé"
+      fields: ["diagnostic", "symptomes", "traitement"]
+      protection_level: "critical"
+      retention_days: 365  # 1 an sauf accord médical
+      encryption_required: true
+      audit_required: true
+      anonymization_required: true
+    
+    - name: "usage"
+      description: "Données d'usage"
+      fields: ["ip_address", "user_agent", "session_id"]
+      protection_level: "medium"
+      retention_days: 365
+      pseudonymization_required: true
+    
+    - name: "preferences"
+      description: "Préférences utilisateur"
+      fields: ["langue", "notifications", "theme"]
+      protection_level: "low"
+      retention_days: 1095  # 3 ans
+      encryption_required: false
+
+# Configuration consentement utilisateur
+consent_management:
+  # Types de consentement
+  consent_types:
+    - id: "essential"
+      name: "Cookies essentiels"
+      description: "Nécessaires au fonctionnement du site"
+      required: true
+      category: "functional"
+    
+    - id: "analytics"
+      name: "Cookies analytiques"
+      description: "Amélioration de l'expérience utilisateur"
+      required: false
+      category: "analytics"
+      default_value: false
+    
+    - id: "marketing"
+      name: "Cookies marketing"
+      description: "Personnalisation des contenus"
+      required: false
+      category: "marketing"
+      default_value: false
+    
+    - id: "health_data"
+      name: "Données de santé"
+      description: "Collecte et traitement des données médicales"
+      required: false
+      category: "health"
+      explicit_consent: true
+  
+  # Gestion des cookies
+  cookie_management:
+    banner_enabled: true
+    granular_control: true
+    consent_expiry_days: 365
+    reconsent_period_days: 365
+    
+  # API de consentement
+  consent_api:
+    enabled: true
+    endpoints:
+      - "/api/consent/status"
+      - "/api/consent/update"
+      - "/api/consent/withdraw"
+      - "/api/consent/history"
+
+# Configuration audit et logs RGPD
+audit_logging:
+  # Configuration générale
+  enabled: true
+  format: "json"
+  encryption: true
+  
+  # Événements à auditer
+  events:
+    - name: "user_login"
+      category: "authentication"
+      retention_days: 2555
+    
+    - name: "data_access"
+      category: "data_access"
+      retention_days: 2555
+      include_fields: ["user_id", "resource", "action", "timestamp"]
+    
+    - name: "data_modification"
+      category: "data_modification"
+      retention_days: 2555
+      include_before_after: true
+    
+    - name: "consent_change"
+      category: "consent"
+      retention_days: 2555
+      include_details: true
+    
+    - name: "data_export"
+      category: "subject_rights"
+      retention_days: 2555
+    
+    - name: "data_deletion"
+      category: "subject_rights"
+      retention_days: 2555
+      permanent_record: true
+  
+  # Stockage des audits
+  storage:
+    type: "database"
+    table: "gdpr_audit_logs"
+    partition_by: "month"
+    compression: true
+    encryption: true
+
+# Configuration droits des personnes concernées
+subject_rights:
+  # Droit d'accès
+  right_of_access:
+    enabled: true
+    response_time_days: 30
+    format: ["JSON", "PDF", "CSV"]
+    include_metadata: true
+    
+  # Droit de rectification
+  right_of_rectification:
+    enabled: true
+    verification_required: true
+    notification_of_change: true
+    
+  # Droit à l'effacement (droit à l'oubli)
+  right_of_erasure:
+    enabled: true
+    verification_required: true
+    cascading_deletion: true
+    audit_trail: true
+    exceptions:
+      - "legal_obligation"
+      - "public_interest"
+      - "scientific_research"
+    
+  # Droit à la portabilité
+  right_of_portability:
+    enabled: true
+    formats: ["JSON", "CSV", "XML"]
+    include_metadata: false
+    
+  # Droit de limitation
+  right_of_restriction:
+    enabled: true
+    notification_required: true
+    
+  # API pour les droits
+  rights_api:
+    enabled: true
+    authentication_required: true
+    endpoints:
+      - "/api/gdpr/access-request"
+      - "/api/gdpr/rectification-request"
+      - "/api/gdpr/erasure-request"
+      - "/api/gdpr/portability-request"
+      - "/api/gdpr/restriction-request"
+
+# Configuration sécurité renforcée
+security_enhanced:
+  # Chiffrement
+  encryption:
+    algorithms:
+      symmetric: "AES-256-GCM"
+      asymmetric: "RSA-4096"
+      hashing: "SHA-256"
+    
+    key_management:
+      rotation_days: 90
+      backup_keys: 3
+      hsm_enabled: false  # Hardware Security Module
+    
+  # Authentification
+  authentication:
+    mfa_required: true
+    password_policy:
+      min_length: 12
+      require_uppercase: true
+      require_lowercase: true
+      require_numbers: true
+      require_symbols: true
+      history_count: 12
+      expiry_days: 90
+    
+    session_management:
+      timeout_minutes: 30
+      concurrent_sessions: 1
+      secure_cookies: true
+  
+  # Contrôle d'accès
+  access_control:
+    rbac_enabled: true
+    principle_least_privilege: true
+    regular_access_review: true
+    review_frequency_days: 90
+
+# Configuration notification de violation
+breach_notification:
+  enabled: true
+  
+  # Détection automatique
+  detection:
+    enabled: true
+    monitoring_events:
+      - "unauthorized_access"
+      - "data_exfiltration"
+      - "system_compromise"
+      - "insider_threat"
+    
+    thresholds:
+      failed_logins: 5
+      unusual_data_access: 10
+      large_data_export: "100MB"
+  
+  # Notification automatique
+  notification:
+    cnil_notification: true  # Commission Nationale de l'Informatique et des Libertés
+    notification_delay_hours: 72
+    
+    recipients:
+      internal:
+        - "dpo@mspr3-health.fr"
+        - "security@mspr3-health.fr"
+        - "legal@mspr3-health.fr"
+      
+      external:
+        cnil_portal: "https://notifications.cnil.fr"
+        affected_users: true
+        user_notification_delay_hours: 72
+  
+  # Documentation automatique
+  documentation:
+    incident_report: true
+    impact_assessment: true
+    remediation_plan: true
+    lessons_learned: true
+
+# Configuration DPO (Délégué à la Protection des Données)
+dpo_config:
+  contact:
+    name: "Marie Dubois"
+    email: "dpo@mspr3-health.fr"
+    phone: "+33 1 23 45 67 89"
+    address: "123 Rue de la Santé, 75014 Paris, France"
+  
+  responsibilities:
+    - "Conseil et sensibilisation"
+    - "Contrôle du respect du RGPD"
+    - "Point de contact avec la CNIL"
+    - "Analyse d'impact sur la protection des données"
+  
+  reporting:
+    frequency: "monthly"
+    recipients: ["direction@mspr3-health.fr"]
+    metrics:
+      - "number_of_requests"
+      - "response_time"
+      - "compliance_score"
+      - "training_completion"
+
+# Configuration formation et sensibilisation
+training_config:
+  mandatory_training:
+    enabled: true
+    frequency_months: 12
+    modules:
+      - "Introduction au RGPD"
+      - "Gestion des données personnelles"
+      - "Sécurité informatique"
+      - "Droits des personnes concernées"
+      - "Gestion des incidents"
+  
+  certification:
+    required_roles: ["developers", "administrators", "support"]
+    validity_months: 24
+    
+  awareness:
+    newsletters: true
+    security_alerts: true
+    best_practices: true
+
+# Métriques de conformité RGPD
+compliance_metrics:
+  enabled: true
+  
+  kpis:
+    - name: "consent_rate"
+      description: "Taux de consentement utilisateurs"
+      target: "> 70%"
+    
+    - name: "subject_rights_response_time"
+      description: "Temps de réponse aux demandes RGPD"
+      target: "< 30 jours"
+    
+    - name: "audit_coverage"
+      description: "Couverture des audits de sécurité"
+      target: "100%"
+    
+    - name: "training_completion"
+      description: "Taux de completion des formations"
+      target: "> 95%"
+    
+    - name: "incident_response_time"
+      description: "Temps de réponse aux incidents"
+      target: "< 4 heures"
+
+# Configuration monitoring RGPD
+gdpr_monitoring:
+  enabled: true
+  
+  dashboards:
+    - name: "GDPR Compliance Dashboard"
+      path: "/var/lib/grafana/dashboards/gdpr-compliance.json"
+      metrics:
+        - "consent_metrics"
+        - "audit_metrics"
+        - "breach_detection"
+        - "subject_rights_metrics"
+  
+  alerts:
+    - name: "Potential Data Breach"
+      condition: "unusual_activity_detected"
+      severity: "critical"
+      notification_delay: "immediate"
+    
+    - name: "Subject Rights Deadline"
+      condition: "response_deadline_approaching"
+      severity: "warning"
+      notification_delay: "24h"
+    
+    - name: "Consent Expiry"
+      condition: "consent_expiring_soon"
+      severity: "info"
+      notification_delay: "7d"

@@ -1,0 +1,312 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deployment
+  namespace: mspr3-health-platform
+  labels:
+    app: mysql
+    tier: database
+    country: multi
+    app.kubernetes.io/name: mysql
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: mspr3-health-platform
+    app.kubernetes.io/version: "8.0"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # Important pour les bases de données
+  selector:
+    matchLabels:
+      app: mysql
+      tier: database
+  template:
+    metadata:
+      labels:
+        app: mysql
+        tier: database
+        country: multi
+    spec:
+      priorityClassName: mspr3-high-priority
+      serviceAccountName: mspr3-app-service-account
+      
+      # Security Context
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+          name: mysql
+        
+        # Variables d'environnement
+        env:
+        - name: MYSQL_DATABASE
+          value: "dwh"
+        - name: MYSQL_ALLOW_EMPTY_PASSWORD
+          value: "yes"
+        - name: MYSQL_ROOT_PASSWORD
+          value: ""
+        
+        # Configuration des ressources
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        
+        # Volumes
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+        - name: mysql-config
+          mountPath: /etc/mysql/conf.d
+        - name: mysql-init
+          mountPath: /docker-entrypoint-initdb.d
+        
+        # Health Checks
+        livenessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          exec:
+            command:
+            - mysql
+            - -h
+            - localhost
+            - -e
+            - "SELECT 1"
+          initialDelaySeconds: 5
+          periodSeconds: 2
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 3
+      
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+      - name: mysql-config
+        configMap:
+          name: mysql-config
+      - name: mysql-init
+        configMap:
+          name: mysql-init-config
+      
+      # Node Affinity - Préférer les nœuds avec SSD
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: node.kubernetes.io/instance-type
+                operator: In
+                values: ["ssd"]
+      
+      # Tolérance pour les nœuds database
+      tolerations:
+      - key: "database"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+---
+# Service pour MySQL
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: mspr3-health-platform
+  labels:
+    app: mysql
+    tier: database
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3306
+    targetPort: 3306
+    protocol: TCP
+    name: mysql
+  selector:
+    app: mysql
+    tier: database
+---
+# PersistentVolumeClaim pour MySQL
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: mspr3-health-platform
+  labels:
+    app: mysql
+    tier: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast-ssd  # Classe de stockage SSD pour les performances
+  resources:
+    requests:
+      storage: 10Gi
+---
+# ConfigMap pour la configuration MySQL
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+  namespace: mspr3-health-platform
+data:
+  custom.cnf: |
+    [mysqld]
+    # Configuration optimisée pour Kubernetes
+    max_connections = 200
+    innodb_buffer_pool_size = 1G
+    innodb_log_file_size = 256M
+    innodb_flush_log_at_trx_commit = 2
+    innodb_flush_method = O_DIRECT
+    
+    # Charset
+    character-set-server = utf8mb4
+    collation-server = utf8mb4_unicode_ci
+    
+    # Timezone
+    default-time-zone = '+00:00'
+    
+    # Logging
+    general_log = 0
+    slow_query_log = 1
+    slow_query_log_file = /var/log/mysql/slow.log
+    long_query_time = 2
+    
+    # Security
+    skip-name-resolve
+    
+    # Performance Schema
+    performance_schema = ON
+    performance_schema_max_table_instances = 400
+    performance_schema_max_table_handles = 4000
+---
+# ConfigMap pour l'initialisation MySQL
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init-config
+  namespace: mspr3-health-platform
+data:
+  01-init.sql: |
+    -- Script d'initialisation MSPR3 Kubernetes
+    CREATE DATABASE IF NOT EXISTS dwh CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    USE dwh;
+    
+    -- Index pour améliorer les performances
+    -- Les tables seront créées par l'application
+    
+    -- Table pour les logs ETL
+    CREATE TABLE IF NOT EXISTS etl_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        process_name VARCHAR(100) NOT NULL,
+        status ENUM('started', 'completed', 'failed') NOT NULL,
+        message TEXT,
+        records_processed INT DEFAULT 0,
+        execution_time DECIMAL(10,2) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_process_status (process_name, status),
+        INDEX idx_created_at (created_at)
+    );
+    
+    -- Table pour les métriques de performance
+    CREATE TABLE IF NOT EXISTS performance_metrics (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        service_name VARCHAR(50) NOT NULL,
+        endpoint VARCHAR(100) NOT NULL,
+        response_time DECIMAL(10,3) NOT NULL,
+        status_code INT NOT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_service_time (service_name, timestamp),
+        INDEX idx_endpoint (endpoint)
+    );
+    
+    -- Table pour les événements Kubernetes
+    CREATE TABLE IF NOT EXISTS k8s_events (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        event_type VARCHAR(50) NOT NULL,
+        object_name VARCHAR(100) NOT NULL,
+        namespace_name VARCHAR(50) NOT NULL,
+        reason VARCHAR(100),
+        message TEXT,
+        first_timestamp TIMESTAMP,
+        last_timestamp TIMESTAMP,
+        count INT DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_event_type (event_type),
+        INDEX idx_object (object_name, namespace_name),
+        INDEX idx_timestamp (first_timestamp)
+    );
+    
+    -- Insertion de données de test
+    INSERT IGNORE INTO Continent (nomContinent) VALUES 
+    ('Europe'), ('Amérique du Nord'), ('Amérique du Sud'), ('Asie'), ('Afrique'), ('Océanie');
+    
+    INSERT IGNORE INTO Maladie (nomMaladie) VALUES 
+    ('COVID-19'), ('Grippe'), ('Tuberculose'), ('Hépatite'), ('Paludisme');
+    
+    -- Procédure de nettoyage pour Kubernetes
+    DELIMITER //
+    CREATE PROCEDURE IF NOT EXISTS CleanOldLogs()
+    BEGIN
+        -- Nettoyer les logs de plus de 7 jours (plus strict en K8s)
+        DELETE FROM etl_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY);
+        DELETE FROM performance_metrics WHERE timestamp < DATE_SUB(NOW(), INTERVAL 3 DAY);
+        DELETE FROM k8s_events WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY);
+        
+        -- Optimiser les tables
+        OPTIMIZE TABLE etl_logs, performance_metrics, k8s_events;
+    END //
+    DELIMITER ;
+    
+    -- Créer un utilisateur pour Grafana si nécessaire
+    -- CREATE USER IF NOT EXISTS 'grafana'@'%' IDENTIFIED BY 'grafana_k8s_pwd';
+    -- GRANT SELECT ON dwh.* TO 'grafana'@'%';
+    
+    FLUSH PRIVILEGES;
+---
+# HorizontalPodAutoscaler pour MySQL (limité car stateful)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mysql-hpa
+  namespace: mspr3-health-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: mysql-deployment
+  minReplicas: 1
+  maxReplicas: 1  # MySQL ne peut pas vraiment scaler horizontalement
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
